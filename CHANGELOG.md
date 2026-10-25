@@ -9,6 +9,10 @@ tells you which build you're on and which is latest, so you can read down
 from the top and stop once you reach your own build number — everything
 above it is new since you last refreshed.
 
+## Build 30 — 2026-10-25 18:14 ET
+
+Added Sq Ft and $/Sqft columns (and to the property detail page) — partial coverage for now since the square-footage backfill from build 10 is still running, improves automatically as it finishes.
+
 ## Build 29 — 2026-10-25 18:00 ET
 
 Reordered table columns to lead with what matters most for deciding on a property (status, beds/baths, price, acres, year) — historical/technical fields (owner, sale history, SPAN) now come last.

@@ -145,11 +145,11 @@ estimate_value.py → data.json        (extrapolates ourEstValue from assessed v
 - [x] Select a property and find similar ones (#71) — normalized-distance
       ranking (type, beds/baths/acres/value/year built, physical proximity),
       not a learned model
-- [x] Database backend so categorization syncs across devices (#46) — Firebase
-      (Google sign-in + Firestore), the one deliberate exception to this
-      being a pure static site; see AGENTS.md. Needs a manual Firebase
-      console step (authorize the live domain) before sign-in works on the
-      deployed site — see AGENTS.md.
+- [x] Database backend so categorization syncs across devices (#46, #79) —
+      Firebase (anonymous auth + Firestore, one shared store — no sign-in
+      concept, single-user tool), the one deliberate exception to this being
+      a pure static site; see AGENTS.md.
 - [x] Street View link on the property page (#75) — zero-setup, no API key
+- [x] Sq Ft / $/Sqft columns (#84) — partial coverage, same backfill as #33
 - [ ] Embed Street View as an inline image (#74) — needs a Google Maps
       Platform API key (free, no billing account required)
