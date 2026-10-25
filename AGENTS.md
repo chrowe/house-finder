@@ -152,8 +152,11 @@ rerun `python3 enrich.py` and it picks up where it left off. See [#3](https://gi
   For any user-facing change (new filter, new column, new behavior — not
   internal refactors or doc-only changes), in the same commit:
   1. Bump `version.json`'s `build` by exactly 1.
-  2. Add a new `## Build <that number> — <date>` section at the top of
-     CHANGELOG.md with a one-line description.
+  2. Add a new `## Build <that number> — <date> <HH:MM> ET` section at the
+     top of CHANGELOG.md with a one-line description. Use the actual merge
+     time (check `git log -1 --date=iso` after merging, in ET — this project
+     is for a Vermont house search, so ET is the natural default — and amend
+     the heading if your estimate was off), not just the date.
   The update banner polls `version.json` and tells the visitor which build
   they're on vs. the latest — skipping either step breaks that silently (no
   error, it just quietly stops being accurate). If two PRs are in flight at
