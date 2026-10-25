@@ -43,6 +43,12 @@ rerun `python3 enrich.py` and it picks up where it left off. See #3.
   even after a full scrape. See #4.
 - There is no "for sale" / active-listing status anywhere in this data. Everything
   is public assessment records. See #5.
+- `style`/`exterior`/`roof` from the record-card narrative are **always** `"N/A"`
+  in Montpelier's data (confirmed 100% across every account scraped so far, including
+  houses with real beds/baths/year-built) — the town just doesn't track them.
+  `enrich.py` still scrapes them (harmless), but `merge.py` deliberately drops
+  them and there's no filter/column for them in the UI. Don't re-add one assuming
+  it's a parsing bug (#17).
 - No flood-zone data yet. See #6.
 
 ## GitHub workflow in this repo
