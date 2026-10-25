@@ -96,6 +96,11 @@ rerun `python3 enrich.py` and it picks up where it left off. See [#3](https://gi
 
 ## GitHub workflow in this repo
 
+- Add a one-line entry to [CHANGELOG.md](CHANGELOG.md) for any user-facing
+  change before merging (new filter, new column, new behavior — not internal
+  refactors or doc-only changes). The "new version available" banner links to
+  it, so a stale changelog undermines that feature silently — nothing will
+  break, it'll just quietly stop being useful. See [#53](https://github.com/chrowe/house-finder/issues/53).
 - `delete_branch_on_merge` is enabled. If you stack PRs (branch B based on
   branch A based on `main`), merge from the bottom up and let GitHub delete each
   branch as you go — that's what makes the next PR in the stack auto-retarget to

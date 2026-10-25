@@ -39,11 +39,12 @@ tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
 #more{display:block;margin:10px auto}
 #updateBanner{display:none;position:fixed;bottom:0;left:0;right:0;z-index:2000;background:var(--acc);color:#fff;padding:10px 16px;text-align:center;font-size:14px}
 #updateBanner button{margin:0 0 0 12px;padding:4px 10px;border:1px solid rgba(255,255,255,.6);border-radius:6px;background:transparent;color:#fff;cursor:pointer}
+#updateBanner a{color:#fff;text-decoration:underline;margin-left:8px}
 @media(max-width:760px){main{grid-template-columns:1fr;height:auto}aside{border-right:0;border-bottom:1px solid var(--line)}#tablewrap{height:70vh;flex:none}#map{height:70vh;flex:none}}
 </style>
 </head>
 <body>
-<div id="updateBanner">A new version of this app is available.<button onclick="location.reload()">Refresh</button><button onclick="$('updateBanner').style.display='none'">Dismiss</button></div>
+<div id="updateBanner">A new version of this app is available.<a href="https://github.com/chrowe/house-finder/blob/main/CHANGELOG.md" target="_blank" rel="noopener">What's new</a><button onclick="location.reload()">Refresh</button><button onclick="$('updateBanner').style.display='none'">Dismiss</button></div>
 <header><h1>Montpelier, VT — Property Finder</h1><span id="count"></span><span id="updated" style="font-size:12px;color:var(--mut)"></span><a href="https://github.com/chrowe/house-finder/issues/new" target="_blank" rel="noopener" style="margin-left:auto;font-size:12px;color:var(--mut)">Suggest a feature / report a bug</a></header>
 <main>
 <aside>
