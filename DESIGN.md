@@ -8,11 +8,16 @@ cross-reference against what's actually for sale.
 
 ## Why "every property," not just listings
 
-MLS/Zillow/Redfin-style sources only cover homes currently on the market, licensing
-is usually required, and scraping those sites' listings violates their terms of
-service. Public assessor/GIS data covers every property in town, is free, and is
-explicitly licensed for reuse. The trade-off: no live "for sale" status or photos —
-see [Known limitations](#known-limitations).
+MLS/Zillow/Redfin-style sources only cover homes currently on the market, and
+licensing is usually required. Public assessor/GIS data covers every property in
+town, is free, and is explicitly licensed for reuse — so that's the foundation
+(VCGI + Patriot Properties below). Listing status and market value are layered on
+top from Realtor.com (via HomeHarvest) as a secondary, best-effort source: it only
+covers properties with a recent Realtor.com record, it's scraped against that
+site's likely Terms of Service (accepted here as personal, non-commercial,
+low-volume use — see [AGENTS.md](AGENTS.md)), and it's joined by fuzzy address
+matching since there's no shared ID with the base data. See
+[Known limitations](#known-limitations).
 
 ## Architecture
 
@@ -24,9 +29,11 @@ Data is produced by a small pipeline of standalone Python scripts, run on demand
 (not yet automated — #8):
 
 ```
-fetch.py   → data.json        (Vermont VCGI statewide parcel/Grand List data)
-enrich.py  → accounts.jsonl   (Montpelier assessor record cards, scraped)
-merge.py   → data.json        (joins accounts.jsonl onto data.json by SPAN)
+fetch.py          → data.json        (Vermont VCGI statewide parcel/Grand List data)
+enrich.py         → accounts.jsonl   (Montpelier assessor record cards, scraped)
+merge.py          → data.json        (joins accounts.jsonl onto data.json by SPAN)
+listings.py       → listings.json    (Realtor.com listings, via HomeHarvest)
+merge_listings.py → data.json        (joins listings.json onto data.json by address)
 ```
 
 ## Data sources
@@ -45,12 +52,24 @@ merge.py   → data.json        (joins accounts.jsonl onto data.json by SPAN)
    handling), then one record-card fetch per account, resumable and deliberately
    throttled.
 
-3. **(Future, #5)** A live "for sale" / active-listing feed — not yet sourced.
+3. **Realtor.com listings (via [HomeHarvest](https://github.com/ZacharyHampton/HomeHarvest))**
+   — listing status (for sale/pending/sold/etc.), list price, an estimated market
+   value, and a listing link. Only covers properties with a Realtor.com record
+   from roughly the last 10 years, joined onto the base data by normalized street
+   address (no shared ID exists). See [Known limitations](#known-limitations).
 
 ## Known limitations
 
-- **No "for sale" status.** Everything currently in the dataset is public
-  assessment data (who owns it, what it's assessed at), not live listings. See #5.
+- **"For sale" status and market value are partial, not authoritative.** They
+  only cover the ~1,000 Montpelier addresses with a Realtor.com record in the
+  last decade — most properties (especially long-held ones) have neither. This
+  is scraped against Realtor.com's likely Terms of Service, accepted here as
+  personal, non-commercial use only (#5, #21).
+- **The address join for listings is fuzzy.** There's no shared ID between VCGI/
+  Patriot Properties and Realtor.com, so `merge_listings.py` matches on a
+  normalized house-number + street-name + suffix string. ~26% of scraped
+  listings don't match any parcel — mostly rural Montpelier-mailing-address
+  properties outside the actual city boundary, not a matching bug.
 - **The assessor site rate-limits hard.** Two full IP blocks (HTTP 403) were hit
   during development at paces that seemed reasonable at the time. `enrich.py` now
   paces itself at roughly one request every 2-3 seconds with bounded retries and a
@@ -68,20 +87,10 @@ merge.py   → data.json        (joins accounts.jsonl onto data.json by SPAN)
 - [x] Base viewer: fetch VCGI data, filterable table + map (#1)
 - [x] Enrichment pipeline: scrape + merge assessor record-card data, expose as
       filters (#2)
+- [x] Deploy to GitHub Pages (#7) — live at https://chrowe.github.io/house-finder/
+- [x] Listing status + estimated market value via Realtor.com/HomeHarvest (#21,
+      partially #5 — coverage is partial, see limitations above)
 - [ ] Finish the full assessor scrape (#3)
 - [ ] Fix condo SPAN join (#4)
-- [ ] Live "for sale" status (#5)
 - [ ] Flood-zone filter (#6)
-- [ ] Deploy to GitHub Pages (#7)
 - [ ] Automate periodic data refresh (#8)
-
-## PR stack
-
-This project's history is organized as a stack of PRs, each building on the last
-(see [GitHub's stacked-PR guide](https://docs.github.com/en/pull-requests/how-tos/stacked-pull-requests)):
-
-1. `design-and-roadmap` → `main` — this document
-2. `base-viewer` → `design-and-roadmap` — VCGI fetch + base filterable viewer
-3. `enrichment-pipeline` → `base-viewer` — assessor scraper + merge script
-4. `enriched-filters` → `enrichment-pipeline` — beds/baths/year-built/etc. filters
-   in the viewer
