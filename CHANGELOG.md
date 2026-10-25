@@ -6,6 +6,7 @@ roadmap and [AGENTS.md](AGENTS.md) for implementation notes.
 ## 2026-10-25
 
 - Replaced the custom horizontal-scroll slider with a persistent native scrollbar (forces it visible even on systems that auto-hide scrollbars, e.g. macOS) — simpler and no custom JS needed.
+- Moved the Property type, Listing status, and Flood risk filters from the sidebar into dropdown menus on their column headers, with a live count next to each option (Listing status and Flood risk are now multi-select too, like Property type already was).
 - Base parcel data (owners, addresses, assessed/Grand List values) and flood zones now refresh automatically on a monthly schedule, via a reviewed pull request.
 - Added **Our estimate**, a rough value estimate (based on assessed value) for the ~2,000 properties with no real Realtor.com estimate — clearly labeled and kept separate from the real one.
 - Added a "What's new" / Changelog link to the header, always visible (not just inside the update banner).
