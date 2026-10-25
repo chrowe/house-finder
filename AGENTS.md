@@ -44,18 +44,18 @@ reason; the whole point is that this deploys to GitHub Pages as static files.
 
 The upshot: a full scrape takes hours, not minutes. That's expected, not a bug.
 It's resumable (`accounts.jsonl` + `letters_done.txt` track progress) — just
-rerun `python3 enrich.py` and it picks up where it left off. See #3.
+rerun `python3 enrich.py` and it picks up where it left off. See [#3](https://github.com/chrowe/house-finder/issues/3).
 
 ## Known data gaps (don't re-discover these from scratch)
 
 - ~400 condo units have a VCGI SPAN like `C-12405-17` that doesn't match Patriot
   Properties' numeric format (`405-126-11496`) — they won't join in `merge.py`
-  even after a full scrape. See #4.
+  even after a full scrape. See [#4](https://github.com/chrowe/house-finder/issues/4).
 - Listing status/market value (`listings.py`/`merge_listings.py`) only cover
   properties that matched a Realtor.com record from roughly the last 10 years —
   most properties (especially ones that haven't changed hands recently) will have
-  none of these fields. This is **not** the same gap as #5 used to describe —
-  #5 is now about whether this Realtor.com-based coverage is good enough, not
+  none of these fields. This is **not** the same gap as [#5](https://github.com/chrowe/house-finder/issues/5) used to describe —
+  [#5](https://github.com/chrowe/house-finder/issues/5) is now about whether this Realtor.com-based coverage is good enough, not
   about having zero for-sale data.
 - The address join in `merge_listings.py` is normalized-string matching (house
   number + street name + a mapped suffix abbreviation), not a real ID join —
@@ -77,8 +77,8 @@ rerun `python3 enrich.py` and it picks up where it left off. See #3.
   houses with real beds/baths/year-built) — the town just doesn't track them.
   `enrich.py` still scrapes them (harmless), but `merge.py` deliberately drops
   them and there's no filter/column for them in the UI. Don't re-add one assuming
-  it's a parsing bug (#17).
-- No flood-zone data yet. See #6.
+  it's a parsing bug ([#17](https://github.com/chrowe/house-finder/issues/17)).
+- No flood-zone data yet. See [#6](https://github.com/chrowe/house-finder/issues/6).
 
 ## GitHub workflow in this repo
 
@@ -88,7 +88,7 @@ rerun `python3 enrich.py` and it picks up where it left off. See #3.
   wherever it should point (eventually `main`). If you merge out of order, or a
   branch doesn't get deleted, "Closes #N" references silently won't fire because
   GitHub only auto-closes issues on a merge whose base is the repository's
-  default branch — we hit this twice (#1 and #2 both needed manual fixing)
+  default branch — we hit this twice ([#1](https://github.com/chrowe/house-finder/issues/1) and [#2](https://github.com/chrowe/house-finder/issues/2) both needed manual fixing)
   before realizing the setting was off.
 - Don't commit `accounts.jsonl`, `letters_done.txt`, `enrich.log`, or `cookies*`
   — they're gitignored on purpose (regenerable scrape state/logs, not shipped
