@@ -9,6 +9,10 @@ tells you which build you're on and which is latest, so you can read down
 from the top and stop once you reach your own build number — everything
 above it is new since you last refreshed.
 
+## Build 20 — 2026-10-25 11:15 ET
+
+Combined the two estimate columns/filters (Realtor.com's real estimate and our rough extrapolation) into one — they were always mutually exclusive per property, so having them side by side was confusing. The combined column still shows which kind it is (the rough one stays in italics).
+
 ## Build 19 — 2026-10-25 10:35 ET
 
 Added the exact release time to every build heading (previously just the date) — see [#59](https://github.com/chrowe/house-finder/issues/59).
