@@ -9,6 +9,10 @@ tells you which build you're on and which is latest, so you can read down
 from the top and stop once you reach your own build number — everything
 above it is new since you last refreshed.
 
+## Build 21 — 2026-10-25 11:18 ET
+
+Properties with no mapped flood risk now show "No flood risk" instead of a blank cell — the data was always there (every property defaults to minimal risk), it just wasn't being displayed.
+
 ## Build 20 — 2026-10-25 11:15 ET
 
 Combined the two estimate columns/filters (Realtor.com's real estimate and our rough extrapolation) into one — they were always mutually exclusive per property, so having them side by side was confusing. The combined column still shows which kind it is (the rough one stays in italics).
