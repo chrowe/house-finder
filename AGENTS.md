@@ -170,12 +170,14 @@ never got done, so it was simply broken on the deployed site. Replaced with
 Firebase **Anonymous Auth**: a session gets established silently on page
 load (no popup, no authorized-domain requirement), purely so Firestore rules
 can require `request.auth != null` — a low bar that blocks nothing
-determined, but stops the most casual drive-by writes. Data lives in one
-flat **shared** collection, not per-uid: `categorizations/{span}` →
-`{status, notes, updatedAt}`. If you ever bring back a notion of "whose
-categorization is this," that's a real design change (schema + rules both),
-not a tweak — don't casually add a `uid` field back in without rethinking
-the rules too.
+determined, but stops the most casual drive-by writes. Data lives in flat
+**shared** collections, not per-uid: `categorizations/{span}` →
+`{status, notes, updatedAt}`, and `savedFilters/{autoId}` → `{name, qs,
+createdAt}` (#98 — moved off `localStorage` so saved filter sets sync
+across devices too, same tradeoff as categorizations). If you ever bring
+back a notion of "whose data is this," that's a real design change (schema
++ rules both), not a tweak — don't casually add a `uid` field back in
+without rethinking the rules too.
 
 - Loaded as a **separate `<script type="module">`** block after the main
   classic script, not merged into it — the classic script has no idea
@@ -196,6 +198,9 @@ the rules too.
   service cloud.firestore {
     match /databases/{database}/documents {
       match /categorizations/{span} {
+        allow read, write: if request.auth != null;
+      }
+      match /savedFilters/{id} {
         allow read, write: if request.auth != null;
       }
     }

@@ -9,6 +9,10 @@ tells you which build you're on and which is latest, so you can read down
 from the top and stop once you reach your own build number — everything
 above it is new since you last refreshed.
 
+## Build 36 — 2026-10-25 18:53 ET
+
+Moved saved filters from browser-only storage to the shared database — they now sync across your devices like property categorization already does. (Needs one more Firestore rules update — see AGENTS.md.)
+
 ## Build 35 — 2026-10-25 18:48 ET
 
 Fixed corrupted square-footage values — decimal values like "1237.5" were being mangled into garbage (e.g. 12375, or far worse for longer decimals) instead of rounded correctly. Affected 269 of 2,579 parcels with sqft data; fixed now.
