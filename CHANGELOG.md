@@ -9,6 +9,10 @@ tells you which build you're on and which is latest, so you can read down
 from the top and stop once you reach your own build number — everything
 above it is new since you last refreshed.
 
+## Build 18 — 2026-10-25
+
+Moved the Property type, Listing status, and Flood risk filters from the sidebar into dropdown menus on their column headers, with a live count next to each option (Listing status and Flood risk are now multi-select too, like Property type already was).
+
 ## Build 17 — 2026-10-25
 
 Replaced the custom horizontal-scroll slider (build 12) with a persistent native scrollbar — forces it visible even on systems that auto-hide scrollbars (e.g. macOS), with no custom JS needed.
