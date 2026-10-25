@@ -139,3 +139,9 @@ estimate_value.py → data.json        (extrapolates ourEstValue from assessed v
       from a shared CI runner IP — see AGENTS.md)
 - [x] Our own value estimate for parcels with no real Realtor.com estimate
       (#31) — extrapolated from assessed value, clearly labeled as such
+- [x] Per-property detail page (#25) — a `?span=<SPAN>` link on the same
+      index.html (no server-side routing needed), pushState-routed so it
+      doesn't re-fetch data.json on every visit
+- [ ] Select a property and find similar ones (#71)
+- [ ] Database backend so categorization syncs across devices (#46) — Firebase
+      project is set up (#52); wiring it into the app is in progress

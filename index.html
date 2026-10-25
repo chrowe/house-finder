@@ -51,6 +51,11 @@ th{position:sticky;top:0;background:var(--card);user-select:none}
 td.n,th.n{text-align:right}
 tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
 #more{display:block;margin:10px auto}
+.dgroup h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut)}
+.dfield{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px solid var(--line);font-size:14px}
+.dfield span:last-child{text-align:right}
+.addr-link{color:var(--fg);text-decoration:none}
+.addr-link:hover{color:var(--acc);text-decoration:underline}
 #updateBanner{display:none;position:fixed;bottom:0;left:0;right:0;z-index:2000;background:var(--acc);color:#fff;padding:10px 16px;text-align:center;font-size:14px}
 #updateBanner button{margin:0 0 0 12px;padding:4px 10px;border:1px solid rgba(255,255,255,.6);border-radius:6px;background:transparent;color:#fff;cursor:pointer}
 #updateBanner a{color:#fff;text-decoration:underline;margin-left:8px}
@@ -60,7 +65,7 @@ tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
 <body>
 <div id="updateBanner"><span>A new version of this app is available.</span><a href="https://github.com/chrowe/house-finder/blob/main/CHANGELOG.md" target="_blank" rel="noopener">What's new</a><button onclick="location.reload()">Refresh</button><button onclick="$('updateBanner').style.display='none'">Dismiss</button></div>
 <header><h1>Montpelier, VT — Property Finder</h1><span id="count"></span><span id="updated" style="font-size:12px;color:var(--mut)"></span><a href="https://github.com/chrowe/house-finder/blob/main/CHANGELOG.md" target="_blank" rel="noopener" style="margin-left:auto;font-size:12px;color:var(--mut)">Changelog</a><a href="https://github.com/chrowe/house-finder/issues/new" target="_blank" rel="noopener" style="font-size:12px;color:var(--mut)">Suggest a feature / report a bug</a></header>
-<main>
+<main id="main">
 <aside>
   <label>Search (address, owner, SPAN)</label><input id="q" type="search" placeholder="e.g. State St">
   <p style="color:var(--mut);font-size:12px;margin:4px 0 0">Property type, listing status, and flood risk are now filtered from their column headers in the table (click the ▾ next to the column name).</p>
@@ -104,6 +109,17 @@ tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
   <div id="map"></div>
 </section>
 </main>
+<div id="detailView" style="display:none">
+  <div style="padding:12px 16px;border-bottom:1px solid var(--line);background:var(--card)">
+    <a href="#" id="detailBack" style="font-size:13px;color:var(--acc)">&larr; Back to list</a>
+  </div>
+  <div style="max-width:900px;margin:0 auto;padding:20px 16px">
+    <h2 id="detailAddr" style="margin:0 0 2px"></h2>
+    <div id="detailOwner" style="color:var(--mut);margin-bottom:16px"></div>
+    <div id="detailMap" style="height:260px;border:1px solid var(--line);border-radius:6px;margin-bottom:20px"></div>
+    <div id="detailFields" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px"></div>
+  </div>
+</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script>
 const CATS={R1:'Residential (<6 ac)',R2:'Residential (6+ ac)',C:'Commercial',CA:'Commercial apartments',O:'Other / condo',M:'Mobile home (landed)',MHL:'Mobile home (leased land)',I:'Industrial',UE:'Utility – electric',S1:'Seasonal'};
@@ -196,6 +212,13 @@ function updateUrl(){
   Object.entries(HF_PARAM).forEach(([key,param])=>{
     if(HF[key].selected.size)p.set(param,[...HF[key].selected].join(','));
   });
+  // Preserve ?span= (the detail view, a separate concern from these filter
+  // params) rather than silently stripping it - apply() runs on every
+  // filter change and on initial load, and would otherwise wipe it out
+  // from underneath showDetailFromUrl()/a direct link before either gets
+  // a chance to read it.
+  const span=new URLSearchParams(location.search).get('span');
+  if(span)p.set('span',span);
   const qs=p.toString();
   history.replaceState(null,'',qs?'?'+qs:location.pathname);
 }
@@ -205,10 +228,14 @@ fetch('meta.json').then(r=>r.json()).then(m=>{
 fetch('data.json').then(r=>r.json()).then(rows=>{
   data=rows.map(r=>({address:title(r.E911ADDR||r.LOCAPROP||r.DESCPROP),owner:title([r.OWNER1,r.OWNER2].filter(Boolean).join(' / ')),
     cat:r.CAT||'',value:r.REAL_FLV||0,land:r.LAND_LV||0,imp:r.IMPRV_LV||0,hs:r.HSTED_FLV||0,acres:r.ACRESGL||0,span:r.SPAN,lat:r.lat,lng:r.lng,desc:title(r.DESCPROP),
-    beds:r.beds??null,baths:r.baths??null,yearBuilt:r.yearBuilt??null,lastSalePrice:r.lastSalePrice??null,lastSaleDate:r.lastSaleDate||'',
+    beds:r.beds??null,baths:r.baths??null,halfBaths:r.halfBaths??null,threeQtrBaths:r.threeQtrBaths??null,
+    yearBuilt:r.yearBuilt??null,rooms:r.rooms??null,units:r.units??null,
+    lastSalePrice:r.lastSalePrice??null,lastSaleDate:r.lastSaleDate||'',grantor:r.grantor||'',landClass:r.landClass||'',
     dist:haversineMi(DOWNTOWN,r.lat,r.lng),
     mktStatus:r.mktStatus||'',mktEstValue:r.mktEstValue??null,mktListPrice:r.mktListPrice??null,mktUrl:r.mktUrl||'',
+    mktSoldPrice:r.mktSoldPrice??null,mktSoldDate:r.mktSoldDate||'',
     ourEstValue:r.ourEstValue??null,estValue:r.mktEstValue??r.ourEstValue??null,
+    parcid:r.PARCID||'',
     floodRisk:r.floodRisk||'minimal'}));
   data.forEach(d=>d.hay=(d.address+' '+d.owner+' '+d.span+' '+d.desc).toLowerCase());
   buildHF();
@@ -231,6 +258,7 @@ fetch('data.json').then(r=>r.json()).then(rows=>{
   });
   restoreFromUrl();
   apply();
+  showDetailFromUrl();
 });
 function renderHead(){
   $('head').innerHTML=COLS.map(([k,l,n])=>{
@@ -269,7 +297,7 @@ function apply(){
 }
 function render(){
   $('count').textContent=`${view.length.toLocaleString()} of ${data.length.toLocaleString()} properties`;
-  $('body').innerHTML=view.slice(0,shown).map(d=>`<tr><td>${esc(d.address)}</td><td>${esc(d.owner)}</td><td>${CATS[d.cat]||d.cat}</td><td>${d.mktUrl?`<a href="${esc(d.mktUrl)}" target="_blank" rel="noopener">${esc(MSTATUS[d.mktStatus]||d.mktStatus)}</a>`:d.mktStatus?esc(MSTATUS[d.mktStatus]||d.mktStatus):`<span style="color:var(--mut)">Not listed</span>`}</td><td class="n">${fmt(d.value)}</td><td class="n">${d.mktEstValue!=null?fmt(d.mktEstValue):d.ourEstValue!=null?`<span style="font-style:italic;color:var(--mut)" title="Rough estimate, not a real market estimate: assessed value × the typical ratio of real Realtor.com estimates to assessed value in town.">${fmt(d.ourEstValue)}</span>`:''}</td><td class="n">${d.beds??''}</td><td class="n">${d.baths??''}</td><td class="n">${d.yearBuilt??''}</td><td class="n">${fmt(d.lastSalePrice)}</td><td>${esc(d.lastSaleDate)}</td><td class="n">${d.acres.toFixed(2)}</td><td class="n">${d.dist!=null?d.dist.toFixed(1):''}</td><td>${d.floodRisk==='minimal'?`<span style="color:var(--mut)">No flood risk</span>`:`<span style="color:${d.floodRisk==='floodway'?'#c0392b':d.floodRisk==='high'?'#e67e22':'var(--mut)'}">${FLOOD[d.floodRisk]}</span>`}</td><td>${esc(d.span)}</td></tr>`).join('');
+  $('body').innerHTML=view.slice(0,shown).map(d=>`<tr><td><a href="?span=${encodeURIComponent(d.span)}" class="addr-link">${esc(d.address)}</a></td><td>${esc(d.owner)}</td><td>${CATS[d.cat]||d.cat}</td><td>${d.mktUrl?`<a href="${esc(d.mktUrl)}" target="_blank" rel="noopener">${esc(MSTATUS[d.mktStatus]||d.mktStatus)}</a>`:d.mktStatus?esc(MSTATUS[d.mktStatus]||d.mktStatus):`<span style="color:var(--mut)">Not listed</span>`}</td><td class="n">${fmt(d.value)}</td><td class="n">${d.mktEstValue!=null?fmt(d.mktEstValue):d.ourEstValue!=null?`<span style="font-style:italic;color:var(--mut)" title="Rough estimate, not a real market estimate: assessed value × the typical ratio of real Realtor.com estimates to assessed value in town.">${fmt(d.ourEstValue)}</span>`:''}</td><td class="n">${d.beds??''}</td><td class="n">${d.baths??''}</td><td class="n">${d.yearBuilt??''}</td><td class="n">${fmt(d.lastSalePrice)}</td><td>${esc(d.lastSaleDate)}</td><td class="n">${d.acres.toFixed(2)}</td><td class="n">${d.dist!=null?d.dist.toFixed(1):''}</td><td>${d.floodRisk==='minimal'?`<span style="color:var(--mut)">No flood risk</span>`:`<span style="color:${d.floodRisk==='floodway'?'#c0392b':d.floodRisk==='high'?'#e67e22':'var(--mut)'}">${FLOOD[d.floodRisk]}</span>`}</td><td>${esc(d.span)}</td></tr>`).join('');
   $('more').style.display=view.length>shown?'block':'none';
   if(map&&$('map').style.display=='block')drawMap();
 }
@@ -289,7 +317,7 @@ function drawMap(){
   view.filter(d=>d.lat).forEach(d=>{
     const color=cb?cb.get(d)[1]:'#1f6f4a';
     L.circleMarker([d.lat,d.lng],{radius:4,weight:1,color,fillOpacity:.6})
-      .bindPopup(`<b>${esc(d.address)}</b>${d.mktStatus?` <span style="color:var(--acc)">· ${esc(MSTATUS[d.mktStatus]||d.mktStatus)}</span>`:''}<br>${esc(d.owner)}<br>${CATS[d.cat]||d.cat} · ${fmt(d.value)} · ${d.acres.toFixed(2)} ac${d.beds?` · ${d.beds}bd/${d.baths??'?'}ba`:''}${d.yearBuilt?` · built ${d.yearBuilt}`:''}${d.mktEstValue?` · est. ${fmt(d.mktEstValue)}`:d.ourEstValue?` · <i title="Rough estimate, not a real market estimate">our est. ${fmt(d.ourEstValue)}</i>`:''}${d.mktUrl?` · <a href="${esc(d.mktUrl)}" target="_blank" rel="noopener">listing</a>`:''}${d.floodRisk!=='minimal'?` · <span style="color:#c0392b">${FLOOD[d.floodRisk]} flood risk</span>`:''}`).addTo(layer);
+      .bindPopup(`<b><a href="?span=${encodeURIComponent(d.span)}" class="addr-link">${esc(d.address)}</a></b>${d.mktStatus?` <span style="color:var(--acc)">· ${esc(MSTATUS[d.mktStatus]||d.mktStatus)}</span>`:''}<br>${esc(d.owner)}<br>${CATS[d.cat]||d.cat} · ${fmt(d.value)} · ${d.acres.toFixed(2)} ac${d.beds?` · ${d.beds}bd/${d.baths??'?'}ba`:''}${d.yearBuilt?` · built ${d.yearBuilt}`:''}${d.mktEstValue?` · est. ${fmt(d.mktEstValue)}`:d.ourEstValue?` · <i title="Rough estimate, not a real market estimate">our est. ${fmt(d.ourEstValue)}</i>`:''}${d.mktUrl?` · <a href="${esc(d.mktUrl)}" target="_blank" rel="noopener">listing</a>`:''}${d.floodRisk!=='minimal'?` · <span style="color:#c0392b">${FLOOD[d.floodRisk]} flood risk</span>`:''}`).addTo(layer);
   });
   renderMapLegend();
 }
@@ -299,6 +327,108 @@ function renderMapLegend(){
     `<span style="display:inline-block;margin-right:10px"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};margin-right:4px"></span>${esc(label)}</span>`
   ).join(''):'';
 }
+
+// Per-property detail page (#25): a plain ?span=<SPAN> link on the existing
+// index.html, not a separate route (GitHub Pages has no server-side routing,
+// and adding a build step just for routing isn't worth it for one view).
+let detailMap=null;
+function field(label,value){
+  return value==null||value===''?'':`<div class="dfield"><span>${esc(label)}</span><span>${value}</span></div>`;
+}
+function group(title,fieldsHtml){
+  const body=fieldsHtml.filter(Boolean).join('');
+  return body?`<div class="dgroup"><h4>${esc(title)}</h4>${body}</div>`:'';
+}
+function showDetail(d){
+  $('main').style.display='none';
+  $('detailView').style.display='block';
+  $('detailAddr').textContent=d.address;
+  $('detailOwner').textContent=d.owner;
+  const baths=[d.baths!=null?`${d.baths} full`:null,d.halfBaths?`${d.halfBaths} half`:null,d.threeQtrBaths?`${d.threeQtrBaths} 3/4`:null].filter(Boolean).join(', ');
+  $('detailFields').innerHTML=[
+    group('Overview',[
+      field('Type',CATS[d.cat]||d.cat),
+      field('SPAN',esc(d.span)),
+      field('Parcel ID',esc(d.parcid)),
+      field('Acres',d.acres.toFixed(2)),
+      field('Distance to downtown',d.dist!=null?d.dist.toFixed(1)+' mi':null),
+    ]),
+    group('Value',[
+      field('Assessed',fmt(d.value)),
+      field(d.mktEstValue!=null?'Realtor.com est.':'Our rough estimate',d.mktEstValue!=null?fmt(d.mktEstValue):d.ourEstValue!=null?fmt(d.ourEstValue)+' (not a real estimate)':null),
+      field('Homestead value',d.hs?fmt(d.hs):null),
+      field('Land value',d.land?fmt(d.land):null),
+      field('Improvement value',d.imp?fmt(d.imp):null),
+    ]),
+    group('Building',[
+      field('Beds',d.beds),
+      field('Baths',baths||null),
+      field('Year built',d.yearBuilt),
+      field('Rooms',d.rooms),
+      field('Units',d.units),
+      field('Land class',d.landClass||null),
+    ]),
+    group('Sale history',[
+      field('Last sale price',d.lastSalePrice?fmt(d.lastSalePrice):null),
+      field('Last sale date',d.lastSaleDate||null),
+      field('Grantor (seller)',esc(d.grantor)||null),
+    ]),
+    group('Listing',[
+      field('Status',d.mktStatus?(MSTATUS[d.mktStatus]||d.mktStatus):'Not listed'),
+      field('List price',d.mktListPrice?fmt(d.mktListPrice):null),
+      field('Sold price',d.mktSoldPrice?fmt(d.mktSoldPrice):null),
+      field('Sold date',d.mktSoldDate||null),
+      field('Listing',d.mktUrl?`<a href="${esc(d.mktUrl)}" target="_blank" rel="noopener">View on Realtor.com</a>`:null),
+    ]),
+    group('Flood risk',[
+      field('Risk level',d.floodRisk==='minimal'?'No flood risk':FLOOD[d.floodRisk]),
+    ]),
+  ].join('');
+  if(d.lat){
+    if(!detailMap){detailMap=L.map('detailMap');L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(detailMap)}
+    detailMap.setView([d.lat,d.lng],16);
+    detailMap.eachLayer(l=>{if(l instanceof L.CircleMarker)detailMap.removeLayer(l)});
+    L.circleMarker([d.lat,d.lng],{radius:6,weight:2,color:'#1f6f4a',fillOpacity:.8}).addTo(detailMap);
+    setTimeout(()=>detailMap.invalidateSize(),0);
+  }
+}
+function hideDetail(){
+  $('main').style.display='';
+  $('detailView').style.display='none';
+}
+function showDetailFromUrl(){
+  const span=new URLSearchParams(location.search).get('span');
+  if(!span)return;
+  const d=data.find(x=>x.span===span);
+  if(d)showDetail(d);
+}
+// Progressive enhancement on the plain ?span=<SPAN> links: a direct visit
+// (shared link, new tab, no-JS) still works via showDetailFromUrl() above,
+// but a click from within the loaded app is intercepted to pushState + swap
+// views in place instead of a full reload - data.json is ~2MB+, and this app
+// is already a same-page SPA everywhere else (tabs, filters), so reloading
+// the whole document just to view one property would be a jarring step down.
+document.addEventListener('click',e=>{
+  const a=e.target.closest('.addr-link');
+  if(!a)return;
+  e.preventDefault();
+  const span=new URL(a.href).searchParams.get('span');
+  const d=data.find(x=>x.span===span);
+  if(!d)return;
+  history.pushState(null,'',a.getAttribute('href'));
+  showDetail(d);
+});
+window.addEventListener('popstate',()=>{
+  const span=new URLSearchParams(location.search).get('span');
+  if(span){const d=data.find(x=>x.span===span);if(d)showDetail(d);else hideDetail()}
+  else hideDetail();
+});
+$('detailBack').onclick=e=>{
+  e.preventDefault();
+  // A direct visit to a ?span= link (shared URL, new tab) has no prior
+  // history entry to go back to.
+  if(history.length>1)history.back();else{history.pushState(null,'',location.pathname);hideDetail()}
+};
 $('tm').onclick=()=>{
   $('tablewrap').style.display='none';$('map').style.display='block';$('mapControls').style.display='block';$('tm').classList.add('on');$('tt').classList.remove('on');
   if(!map){map=L.map('map').setView([44.26,-72.575],14);
