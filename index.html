@@ -28,6 +28,7 @@ button{margin-top:14px;padding:6px 10px;border:1px solid var(--line);border-radi
 .tabs button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
 section{display:flex;flex-direction:column;min-width:0}
 #tablewrap{overflow:auto;flex:1;margin:0 12px 12px;border:1px solid var(--line);border-radius:6px;background:var(--card)}
+#hscroll{display:block;width:calc(100% - 24px);margin:-8px 12px 12px}
 #map{flex:1;margin:0 12px 12px;border:1px solid var(--line);border-radius:6px;display:none}
 table{border-collapse:collapse;width:100%}
 th,td{padding:6px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
@@ -78,6 +79,7 @@ tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
 <section>
   <div class="tabs"><button id="tt" class="on">Table</button><button id="tm">Map</button></div>
   <div id="tablewrap"><table><thead><tr id="head"></tr></thead><tbody id="body"></tbody></table><button id="more">Show more</button></div>
+  <input id="hscroll" type="range" min="0" max="0" value="0" title="Scroll table sideways">
   <div id="map"></div>
 </section>
 </main>
@@ -167,10 +169,16 @@ function render(){
   $('body').innerHTML=view.slice(0,shown).map(d=>`<tr><td>${esc(d.address)}</td><td>${esc(d.owner)}</td><td>${CATS[d.cat]||d.cat}</td><td>${d.mktUrl?`<a href="${esc(d.mktUrl)}" target="_blank" rel="noopener">${esc(MSTATUS[d.mktStatus]||d.mktStatus)}</a>`:d.mktStatus?esc(MSTATUS[d.mktStatus]||d.mktStatus):`<span style="color:var(--mut)">Not listed</span>`}</td><td class="n">${fmt(d.value)}</td><td class="n">${fmt(d.mktEstValue)}</td><td class="n">${d.beds??''}</td><td class="n">${d.baths??''}</td><td class="n">${d.yearBuilt??''}</td><td class="n">${fmt(d.lastSalePrice)}</td><td>${esc(d.lastSaleDate)}</td><td class="n">${d.acres.toFixed(2)}</td><td class="n">${d.dist!=null?d.dist.toFixed(1):''}</td><td>${d.floodRisk==='minimal'?'':`<span style="color:${d.floodRisk==='floodway'?'#c0392b':d.floodRisk==='high'?'#e67e22':'var(--mut)'}">${FLOOD[d.floodRisk]}</span>`}</td><td>${esc(d.span)}</td></tr>`).join('');
   $('more').style.display=view.length>shown?'block':'none';
   if(map&&$('map').style.display=='block')drawMap();
+  syncHscroll();
+}
+function syncHscroll(){
+  const tw=$('tablewrap');
+  $('hscroll').max=Math.max(0,tw.scrollWidth-tw.clientWidth);
+  $('hscroll').value=tw.scrollLeft;
 }
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 $('more').onclick=()=>{shown+=200;render()};
-['q','vmin','vmax','amin','amax','hs','imp','beds','baths','ybmin','ybmax','spmin','spmax','dist','mvmin','mvmax'].forEach(id=>$(id).addEventListener('input',apply));
+['q','vmin','vmax','amin','amax','hs','imp','beds','baths','ybmin','ybmax','spmin','spmax','dist','mvmin','mvmax','flood'].forEach(id=>$(id).addEventListener('input',apply));
 $('mstatus').addEventListener('change',apply);
 $('reset').onclick=()=>{
   document.querySelectorAll('aside input:not([type=checkbox]),aside select').forEach(e=>e.value='');
@@ -183,12 +191,15 @@ function drawMap(){
     .bindPopup(`<b>${esc(d.address)}</b>${d.mktStatus?` <span style="color:var(--acc)">· ${esc(MSTATUS[d.mktStatus]||d.mktStatus)}</span>`:''}<br>${esc(d.owner)}<br>${CATS[d.cat]||d.cat} · ${fmt(d.value)} · ${d.acres.toFixed(2)} ac${d.beds?` · ${d.beds}bd/${d.baths??'?'}ba`:''}${d.yearBuilt?` · built ${d.yearBuilt}`:''}${d.mktEstValue?` · est. ${fmt(d.mktEstValue)}`:''}${d.mktUrl?` · <a href="${esc(d.mktUrl)}" target="_blank" rel="noopener">listing</a>`:''}${d.floodRisk!=='minimal'?` · <span style="color:#c0392b">${FLOOD[d.floodRisk]} flood risk</span>`:''}`).addTo(layer));
 }
 $('tm').onclick=()=>{
-  $('tablewrap').style.display='none';$('map').style.display='block';$('tm').classList.add('on');$('tt').classList.remove('on');
+  $('tablewrap').style.display='none';$('hscroll').style.display='none';$('map').style.display='block';$('tm').classList.add('on');$('tt').classList.remove('on');
   if(!map){map=L.map('map').setView([44.26,-72.575],14);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map);layer=L.layerGroup().addTo(map)}
   map.invalidateSize();drawMap();
 };
-$('tt').onclick=()=>{$('tablewrap').style.display='';$('map').style.display='none';$('tt').classList.add('on');$('tm').classList.remove('on')};
+$('tt').onclick=()=>{$('tablewrap').style.display='';$('hscroll').style.display='';$('map').style.display='none';$('tt').classList.add('on');$('tm').classList.remove('on');syncHscroll()};
+$('hscroll').oninput=()=>{$('tablewrap').scrollLeft=+$('hscroll').value};
+$('tablewrap').addEventListener('scroll',()=>{$('hscroll').value=$('tablewrap').scrollLeft});
+window.addEventListener('resize',syncHscroll);
 
 // Notify if a newer index.html has been deployed since this page loaded.
 // GitHub Pages serves index.html through a CDN (Fastly) with cache-control:
