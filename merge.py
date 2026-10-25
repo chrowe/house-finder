@@ -68,6 +68,10 @@ def main():
         p["lastSaleDate"] = pr.get("saleDate") or None
         p["grantor"] = (pr.get("grantor") or "").strip() or None
         p["landClass"] = (pr.get("land_class") or "").strip() or None
+        # to_int("N/A") -> None automatically (regex strips all non-digits).
+        # backfill_sqft.py (#33) is still filling this in for some accounts as
+        # of this writing - partial coverage is expected, not a bug.
+        p["sqft"] = to_int(pr.get("finishedAreaSf"))
 
     json.dump(parcels, open("data.json", "w"), separators=(",", ":"))
     json.dump({"lastUpdated": datetime.now(timezone.utc).isoformat()}, open("meta.json", "w"))
