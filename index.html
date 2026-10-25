@@ -116,6 +116,7 @@ tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
   <div style="max-width:900px;margin:0 auto;padding:20px 16px">
     <h2 id="detailAddr" style="margin:0 0 2px"></h2>
     <div id="detailOwner" style="color:var(--mut);margin-bottom:16px"></div>
+    <div id="streetViewLink" style="margin-bottom:8px"></div>
     <div id="detailMap" style="height:260px;border:1px solid var(--line);border-radius:6px;margin-bottom:20px"></div>
     <div id="categorizeWidget" style="margin-bottom:20px"></div>
     <div id="detailFields" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px"></div>
@@ -392,6 +393,10 @@ function showDetail(d){
   window.onPropertyShown?.(d);
   $('detailAddr').textContent=d.address;
   $('detailOwner').textContent=d.owner;
+  // Google's documented Maps URL scheme (no API key needed) - opens Street
+  // View directly at this spot in a new tab. See #74 for an embedded-image
+  // version, which would need a Maps Platform API key.
+  $('streetViewLink').innerHTML=d.lat?`<a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${d.lat},${d.lng}" target="_blank" rel="noopener">View on Google Street View ↗</a>`:'';
   const baths=[d.baths!=null?`${d.baths} full`:null,d.halfBaths?`${d.halfBaths} half`:null,d.threeQtrBaths?`${d.threeQtrBaths} 3/4`:null].filter(Boolean).join(', ');
   $('detailFields').innerHTML=[
     group('Overview',[

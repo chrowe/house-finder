@@ -150,3 +150,6 @@ estimate_value.py → data.json        (extrapolates ourEstValue from assessed v
       being a pure static site; see AGENTS.md. Needs a manual Firebase
       console step (authorize the live domain) before sign-in works on the
       deployed site — see AGENTS.md.
+- [x] Street View link on the property page (#75) — zero-setup, no API key
+- [ ] Embed Street View as an inline image (#74) — needs a Google Maps
+      Platform API key (free, no billing account required)
