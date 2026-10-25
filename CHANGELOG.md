@@ -9,6 +9,10 @@ tells you which build you're on and which is latest, so you can read down
 from the top and stop once you reach your own build number — everything
 above it is new since you last refreshed.
 
+## Build 32 — 2026-10-25 18:19 ET
+
+Refreshed square-footage coverage (2,430 of 3,020 parcels now, up from 2,335) as the backfill continues.
+
 ## Build 31 — 2026-10-25 18:18 ET
 
 Added saved filters — name and save your current filter combination, apply or remove it later. Saved in your browser only (not synced across devices).
