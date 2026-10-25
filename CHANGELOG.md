@@ -5,6 +5,7 @@ roadmap and [AGENTS.md](AGENTS.md) for implementation notes.
 
 ## 2026-10-25
 
+- Base parcel data (owners, addresses, assessed/Grand List values) and flood zones now refresh automatically on a monthly schedule, via a reviewed pull request.
 - Added a horizontal scroll slider below the table, for when there are more columns than fit on screen.
 - Added a **Flood risk** filter and column, based on FEMA's flood hazard maps.
 - Started backfilling square footage for every property (in progress — will show up in a filter once it finishes).

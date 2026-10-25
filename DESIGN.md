@@ -25,8 +25,12 @@ A static site — `index.html` fetches `data.json` and does all filtering/sortin
 mapping client-side. No backend, no build step. This is deliberate: it needs to run
 locally today and deploy to GitHub Pages later with zero infrastructure (#7).
 
-Data is produced by a small pipeline of standalone Python scripts, run on demand
-(not yet automated — #8):
+Data is produced by a small pipeline of standalone Python scripts. `fetch.py`
+and `flood.py`/`merge_flood.py` run monthly via a GitHub Actions workflow
+(`.github/workflows/refresh-data.yml`, opens a PR rather than committing
+directly — see #8); `enrich.py`, `merge.py`, `listings.py`, and
+`merge_listings.py` are still run manually, on demand, and deliberately not
+automated (see [Known limitations](#known-limitations)):
 
 ```
 fetch.py          → data.json        (Vermont VCGI statewide parcel/Grand List data)
@@ -108,4 +112,7 @@ merge_flood.py    → data.json        (point-in-polygon: each parcel's centroid
 - [x] Finish the full assessor scrape (#3)
 - [x] Fix condo SPAN join (#4) — 283 of 408 recovered via Parcel ID fallback
 - [x] Flood-zone filter (#6) — centroid-based, see limitations above
-- [ ] Automate periodic data refresh (#8)
+- [x] Automate periodic data refresh (#8) — `fetch.py` + `flood.py`/
+      `merge_flood.py` run monthly via GitHub Actions and open a PR; `enrich.py`
+      and `listings.py` are intentionally left manual-only (rate-limit/ToS risk
+      from a shared CI runner IP — see AGENTS.md)
