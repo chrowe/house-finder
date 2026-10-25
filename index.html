@@ -118,6 +118,10 @@ tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
     <div id="detailOwner" style="color:var(--mut);margin-bottom:16px"></div>
     <div id="detailMap" style="height:260px;border:1px solid var(--line);border-radius:6px;margin-bottom:20px"></div>
     <div id="detailFields" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px"></div>
+    <div style="margin-top:24px">
+      <button id="findSimilarBtn">Find similar properties</button>
+      <div id="similarResults"></div>
+    </div>
   </div>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
@@ -238,6 +242,7 @@ fetch('data.json').then(r=>r.json()).then(rows=>{
     parcid:r.PARCID||'',
     floodRisk:r.floodRisk||'minimal'}));
   data.forEach(d=>d.hay=(d.address+' '+d.owner+' '+d.span+' '+d.desc).toLowerCase());
+  computeFieldRanges();
   buildHF();
   renderHead();
   $('head').onclick=e=>{
@@ -339,7 +344,48 @@ function group(title,fieldsHtml){
   const body=fieldsHtml.filter(Boolean).join('');
   return body?`<div class="dgroup"><h4>${esc(title)}</h4>${body}</div>`:'';
 }
+// Find-similar (#71): a simple normalized-distance ranking, not a learned
+// model - good enough for "which of ~3,000 houses feel like this one,"
+// not meant to be a precise comp analysis.
+let FIELD_RANGES=null;
+const SIMILARITY_FIELDS=['acres','estValue','beds','baths','yearBuilt'];
+function computeFieldRanges(){
+  FIELD_RANGES={};
+  SIMILARITY_FIELDS.forEach(f=>{
+    const vals=data.map(d=>d[f]).filter(v=>v!=null&&!isNaN(v));
+    FIELD_RANGES[f]={min:Math.min(...vals),max:Math.max(...vals)};
+  });
+}
+function similarityScore(ref,d){
+  let sum=0,n=0;
+  SIMILARITY_FIELDS.forEach(f=>{
+    const av=ref[f],bv=d[f];
+    if(av==null||bv==null)return;
+    const {min,max}=FIELD_RANGES[f],range=max-min||1;
+    const diff=(av-min)/range-(bv-min)/range;
+    sum+=diff*diff;n++;
+  });
+  if(ref.lat&&d.lat){
+    const miles=haversineMi([ref.lat,ref.lng],d.lat,d.lng);
+    const normDist=Math.min(miles/3,1); // whole town is only a few miles across
+    sum+=normDist*normDist;n++;
+  }
+  return n?sum/n:Infinity;
+}
+function findSimilar(ref,limit){
+  return data.filter(d=>d.span!==ref.span)
+    .map(d=>({d,sameType:d.cat===ref.cat,score:similarityScore(ref,d)}))
+    .sort((a,b)=>(a.sameType===b.sameType?0:a.sameType?-1:1)||a.score-b.score)
+    .slice(0,limit).map(x=>x.d);
+}
+function renderSimilar(ref){
+  const matches=findSimilar(ref,10);
+  $('similarResults').innerHTML=matches.map(d=>`<div class="dfield"><span><a href="?span=${encodeURIComponent(d.span)}" class="addr-link">${esc(d.address)}</a></span><span>${CATS[d.cat]||d.cat} · ${d.acres.toFixed(2)}ac${d.beds!=null?` · ${d.beds}bd/${d.baths??'?'}ba`:''}${d.yearBuilt?` · ${d.yearBuilt}`:''} · ${fmt(d.estValue)}</span></div>`).join('');
+}
+let currentDetail=null;
 function showDetail(d){
+  currentDetail=d;
+  $('similarResults').innerHTML='';
   $('main').style.display='none';
   $('detailView').style.display='block';
   $('detailAddr').textContent=d.address;
@@ -429,6 +475,7 @@ $('detailBack').onclick=e=>{
   // history entry to go back to.
   if(history.length>1)history.back();else{history.pushState(null,'',location.pathname);hideDetail()}
 };
+$('findSimilarBtn').onclick=()=>{if(currentDetail)renderSimilar(currentDetail)};
 $('tm').onclick=()=>{
   $('tablewrap').style.display='none';$('map').style.display='block';$('mapControls').style.display='block';$('tm').classList.add('on');$('tt').classList.remove('on');
   if(!map){map=L.map('map').setView([44.26,-72.575],14);
