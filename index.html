@@ -93,6 +93,7 @@ tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
       <option value="flood">Flood risk</option>
       <option value="listing">Listing status</option>
     </select>
+    <label style="display:inline;margin:0 0 0 16px;font-weight:400;text-transform:none;letter-spacing:normal;font-size:13px;cursor:pointer"><input type="checkbox" id="showFloodZones" style="width:auto;vertical-align:middle"> Show FEMA flood zones</label>
     <span id="mapLegend" style="margin-left:12px;font-size:12px"></span>
   </div>
   <div id="map"></div>
@@ -160,7 +161,7 @@ const COLORBY={
 };
 const $=id=>document.getElementById(id);
 const fmt=n=>n==null?'':'$'+n.toLocaleString();
-let data=[],view=[],sort={k:'address',d:1},shown=100,map,layer,openHF=null;
+let data=[],view=[],sort={k:'address',d:1},shown=100,map,layer,floodLayer,floodZonesData=null,openHF=null;
 const title=s=>(s||'').replace(/\s+/g,' ').trim();
 function haversineMi([lat1,lng1],lat2,lng2){
   if(lat2==null||lng2==null)return null;
@@ -293,11 +294,42 @@ function renderMapLegend(){
 $('tm').onclick=()=>{
   $('tablewrap').style.display='none';$('map').style.display='block';$('mapControls').style.display='block';$('tm').classList.add('on');$('tt').classList.remove('on');
   if(!map){map=L.map('map').setView([44.26,-72.575],14);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map);layer=L.layerGroup().addTo(map)}
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map);layer=L.layerGroup().addTo(map);floodLayer=L.layerGroup().addTo(map)}
   map.invalidateSize();drawMap();
 };
 $('tt').onclick=()=>{$('tablewrap').style.display='';$('map').style.display='none';$('mapControls').style.display='none';$('tt').classList.add('on');$('tm').classList.remove('on')};
 $('mapColorBy').onchange=drawMap;
+// FEMA flood zone shapes (#68) - a separate, simplified/rounded-coordinate
+// file from the full-precision one merge_flood.py uses for classification
+// (that one is ~7.7MB; this is ~350KB). Fetched lazily on first toggle-on
+// since most visits to the map won't care about this layer.
+function classifyZone(z){
+  if(z.sfha)return(z.subty||'').toUpperCase()==='FLOODWAY'?['Floodway',MAPSTATUS.critical]:['High risk (SFHA)',MAPSTATUS.serious];
+  if(z.zone==='X'&&(z.subty||'').toUpperCase().includes('0.2 PCT'))return['Moderate risk',MAPSTATUS.warning];
+  return null;
+}
+function drawFloodZones(){
+  floodLayer.clearLayers();
+  if(!$('showFloodZones').checked||!floodZonesData)return;
+  floodZonesData.forEach(z=>{
+    const c=classifyZone(z);
+    if(!c)return;
+    const [label,color]=c;
+    // Pass every ring to one L.polygon call (not one polygon per ring) so a
+    // feature's hole rings are cut out rather than rendered as their own
+    // filled shapes - some zones here do have holes (e.g. an AE zone with
+    // an island of higher ground inside it).
+    L.polygon(z.rings.map(ring=>ring.map(([x,y])=>[y,x])),{color,weight:1,fillOpacity:.25})
+      .bindTooltip(label).addTo(floodLayer);
+  });
+}
+$('showFloodZones').onchange=()=>{
+  if($('showFloodZones').checked&&!floodZonesData){
+    fetch('flood_zones_map.json').then(r=>r.json()).then(d=>{floodZonesData=d;drawFloodZones()}).catch(()=>{});
+  }else{
+    drawFloodZones();
+  }
+};
 
 // Notify if a newer build has been deployed since this page loaded, using
 // version.json's build number (bumped by 1 in every PR alongside a

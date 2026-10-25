@@ -9,7 +9,7 @@ See [DESIGN.md](DESIGN.md) for the full design doc and roadmap.
 - **Vermont VCGI statewide parcel data** (`fetch.py` → `data.json`): every parcel in Montpelier with owner, address, acreage, property type, and Grand List (assessed) values. Covers all ~3,020 parcels regardless of whether they're for sale.
 - **Montpelier assessor record cards** via Patriot Properties (`enrich.py` → `accounts.jsonl`, merged in by `merge.py`): adds bedrooms, bathrooms, year built, building style, and last sale price/date where available.
 - **Realtor.com listing data** via the [HomeHarvest](https://github.com/ZacharyHampton/HomeHarvest) package (`listings.py` → `listings.json`, merged in by `merge_listings.py`): adds listing status (for sale/pending/sold/etc.), list price, an estimated market value, and a link to the listing, joined by normalized street address (there's no shared ID with this source). ⚠️ This scrapes Realtor.com, which almost certainly prohibits it in their Terms of Service — accepted here only as personal, non-commercial, low-volume use for one person's house search. See [AGENTS.md](AGENTS.md).
-- **FEMA flood hazard data** (`flood.py` → `flood_zones.json`, merged in by `merge_flood.py`): adds a flood-risk level (minimal/moderate/high/floodway) for each parcel, based on whether its centroid falls inside a mapped FEMA flood zone.
+- **FEMA flood hazard data** (`flood.py` → `flood_zones.json`, merged in by `merge_flood.py`): adds a flood-risk level (minimal/moderate/high/floodway) for each parcel, based on whether its centroid falls inside a mapped FEMA flood zone. `flood.py` also writes `flood_zones_map.json`, a simplified copy of the same zones (~350KB vs. the full ~7.7MB) that the app fetches on demand to show the actual zone shapes on the map.
 - **Our own value estimate** (`estimate_value.py`, no fetch step — pure computation on `data.json`): for the ~2,000 parcels with no real Realtor.com estimate, extrapolates one from the assessed value (`REAL_FLV`) using the median ratio of real Realtor.com estimates to assessed value, observed across the ~1,000 parcels that have both (split by property type where there's enough data, see [AGENTS.md](AGENTS.md)). Stored as a separate `ourEstValue` field — never overwrites or is shown as if it were `mktEstValue`. See [#31](https://github.com/chrowe/house-finder/issues/31).
 
 Most properties won't have listing data — it only covers ones with a Realtor.com record in roughly the last 10 years.
@@ -46,6 +46,6 @@ Then open http://localhost:8000/
 
 ## Deploying to GitHub Pages
 
-This is a static site (`index.html` + `data.json` + `meta.json`) — no build step. Push to GitHub, then in the repo's Settings → Pages, set the source to "Deploy from branch" / `main` / `root`.
+This is a static site (`index.html` + `data.json` + `meta.json` + `version.json` + `flood_zones_map.json`) — no build step. Push to GitHub, then in the repo's Settings → Pages, set the source to "Deploy from branch" / `main` / `root`.
 
 `meta.json` holds a `lastUpdated` timestamp, written by `merge.py`/`merge_listings.py`/`merge_flood.py`/`estimate_value.py` each time they regenerate `data.json`, and shown in the app header.

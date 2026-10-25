@@ -67,7 +67,9 @@ jobs:
 
             - `fetch.py` — latest VCGI parcel data (owners, addresses, assessed/Grand
               List values, new/removed parcels).
-            - `flood.py` + `merge_flood.py` — latest FEMA flood hazard zones.
+            - `flood.py` + `merge_flood.py` — latest FEMA flood hazard zones
+              (both the per-parcel classification and the simplified shapes
+              shown on the map, #68).
 
             Assessor record-card data (beds/baths/sale history) and Realtor.com listing
             data are **not** touched by this workflow — `fetch.py` preserves whatever
@@ -81,3 +83,4 @@ jobs:
           add-paths: |
             data.json
             meta.json
+            flood_zones_map.json
