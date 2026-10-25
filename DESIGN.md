@@ -145,5 +145,8 @@ estimate_value.py → data.json        (extrapolates ourEstValue from assessed v
 - [x] Select a property and find similar ones (#71) — normalized-distance
       ranking (type, beds/baths/acres/value/year built, physical proximity),
       not a learned model
-- [ ] Database backend so categorization syncs across devices (#46) — Firebase
-      project is set up (#52); wiring it into the app is in progress
+- [x] Database backend so categorization syncs across devices (#46) — Firebase
+      (Google sign-in + Firestore), the one deliberate exception to this
+      being a pure static site; see AGENTS.md. Needs a manual Firebase
+      console step (authorize the live domain) before sign-in works on the
+      deployed site — see AGENTS.md.

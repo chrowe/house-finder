@@ -64,7 +64,7 @@ tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
 </head>
 <body>
 <div id="updateBanner"><span>A new version of this app is available.</span><a href="https://github.com/chrowe/house-finder/blob/main/CHANGELOG.md" target="_blank" rel="noopener">What's new</a><button onclick="location.reload()">Refresh</button><button onclick="$('updateBanner').style.display='none'">Dismiss</button></div>
-<header><h1>Montpelier, VT — Property Finder</h1><span id="count"></span><span id="updated" style="font-size:12px;color:var(--mut)"></span><a href="https://github.com/chrowe/house-finder/blob/main/CHANGELOG.md" target="_blank" rel="noopener" style="margin-left:auto;font-size:12px;color:var(--mut)">Changelog</a><a href="https://github.com/chrowe/house-finder/issues/new" target="_blank" rel="noopener" style="font-size:12px;color:var(--mut)">Suggest a feature / report a bug</a></header>
+<header><h1>Montpelier, VT — Property Finder</h1><span id="count"></span><span id="updated" style="font-size:12px;color:var(--mut)"></span><span id="authBox" style="margin-left:auto;font-size:12px"></span><a href="https://github.com/chrowe/house-finder/blob/main/CHANGELOG.md" target="_blank" rel="noopener" style="font-size:12px;color:var(--mut)">Changelog</a><a href="https://github.com/chrowe/house-finder/issues/new" target="_blank" rel="noopener" style="font-size:12px;color:var(--mut)">Suggest a feature / report a bug</a></header>
 <main id="main">
 <aside>
   <label>Search (address, owner, SPAN)</label><input id="q" type="search" placeholder="e.g. State St">
@@ -117,6 +117,7 @@ tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
     <h2 id="detailAddr" style="margin:0 0 2px"></h2>
     <div id="detailOwner" style="color:var(--mut);margin-bottom:16px"></div>
     <div id="detailMap" style="height:260px;border:1px solid var(--line);border-radius:6px;margin-bottom:20px"></div>
+    <div id="categorizeWidget" style="margin-bottom:20px"></div>
     <div id="detailFields" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px"></div>
     <div style="margin-top:24px">
       <button id="findSimilarBtn">Find similar properties</button>
@@ -388,6 +389,7 @@ function showDetail(d){
   $('similarResults').innerHTML='';
   $('main').style.display='none';
   $('detailView').style.display='block';
+  window.onPropertyShown?.(d);
   $('detailAddr').textContent=d.address;
   $('detailOwner').textContent=d.owner;
   const baths=[d.baths!=null?`${d.baths} full`:null,d.halfBaths?`${d.halfBaths} half`:null,d.threeQtrBaths?`${d.threeQtrBaths} 3/4`:null].filter(Boolean).join(', ');
@@ -441,6 +443,7 @@ function showDetail(d){
 function hideDetail(){
   $('main').style.display='';
   $('detailView').style.display='none';
+  window.onPropertyHidden?.();
 }
 function showDetailFromUrl(){
   const span=new URLSearchParams(location.search).get('span');
@@ -541,6 +544,112 @@ function checkForUpdate(){
 setInterval(checkForUpdate,60*1000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkForUpdate()});
 window.addEventListener('focus',checkForUpdate);
+</script>
+<script type="module">
+// Cross-device categorization (#46). A separate module script, decoupled
+// from the classic script above via two small hooks it calls
+// (window.onPropertyShown/onPropertyHidden) rather than this script reaching
+// into that one's internals - keeps the already-large classic script from
+// needing to know anything about Firebase.
+//
+// Firestore layout: users/{uid}/categorizations/{span} -> {status, notes,
+// updatedAt}. Security rules (paste into the Firebase console under
+// Firestore Database -> Rules) restrict each user to their own subtree -
+// see AGENTS.md for the exact rules text. The config below is safe to
+// commit publicly; Firebase's security model is enforced by those rules,
+// not by keeping this key secret.
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+import {getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
+import {getFirestore,doc,getDoc,setDoc,serverTimestamp} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+
+const firebaseConfig={
+  apiKey:"AIzaSyDycolKDsXiX-3nAQe_nhErKO-o22AwVmY",
+  authDomain:"house-finder-28b58.firebaseapp.com",
+  projectId:"house-finder-28b58",
+  storageBucket:"house-finder-28b58.firebasestorage.app",
+  messagingSenderId:"875539210247",
+  appId:"1:875539210247:web:76559c35e4c9458f8b4aa2",
+};
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app);
+const db=getFirestore(app);
+
+const STATUSES=[["interested","Interested"],["maybe","Maybe"],["rejected","Rejected"],["visited","Visited"]];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+let currentUser=null;
+// Read directly from the URL rather than from the classic script's DOM
+// state, since module scripts are deferred and there's no guaranteed
+// ordering between this initializing and the classic script's own fetch of
+// data.json resolving and calling showDetailFromUrl().
+let currentSpan=new URLSearchParams(location.search).get("span")||null;
+
+function renderAuthBox(){
+  const box=document.getElementById("authBox");
+  if(!box)return;
+  if(currentUser){
+    box.innerHTML=`${esc(currentUser.displayName||currentUser.email)} <button id="signOutBtn" style="margin-left:6px">Sign out</button>`;
+    document.getElementById("signOutBtn").onclick=()=>signOut(auth);
+  }else{
+    box.innerHTML=`<button id="signInBtn">Sign in with Google</button>`;
+    document.getElementById("signInBtn").onclick=()=>signInWithPopup(auth,new GoogleAuthProvider()).catch(e=>alert("Sign-in failed: "+e.message));
+  }
+}
+
+async function renderCategorizeWidget(){
+  const el=document.getElementById("categorizeWidget");
+  if(!el||!currentSpan)return;
+  if(!currentUser){
+    el.innerHTML=`<div style="color:var(--mut);font-size:13px">Sign in (top right) to categorize this property - interested/maybe/rejected/visited, with notes, synced across your devices.</div>`;
+    return;
+  }
+  el.innerHTML=`<div style="color:var(--mut);font-size:13px">Loading your notes...</div>`;
+  const ref=doc(db,"users",currentUser.uid,"categorizations",currentSpan);
+  let saved={};
+  try{
+    const snap=await getDoc(ref);
+    if(snap.exists())saved=snap.data();
+  }catch(e){
+    el.innerHTML=`<div style="color:#c0392b;font-size:13px">Couldn't load your notes: ${esc(e.message)}</div>`;
+    return;
+  }
+  el.innerHTML=`
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+      ${STATUSES.map(([val,label])=>`<button data-status="${val}" class="catStatusBtn" style="${saved.status===val?'background:var(--acc);color:#fff;border-color:var(--acc)':''}">${label}</button>`).join("")}
+      ${saved.status?`<button data-status="" class="catStatusBtn">Clear</button>`:""}
+    </div>
+    <textarea id="catNotes" placeholder="Notes (synced across your devices)..." style="width:100%;min-height:60px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font:inherit">${esc(saved.notes||"")}</textarea>
+    <div id="catSaveStatus" style="font-size:12px;color:var(--mut);margin-top:4px"></div>
+  `;
+  el.querySelectorAll(".catStatusBtn").forEach(btn=>btn.onclick=()=>saveCategorization({status:btn.dataset.status}));
+  let notesTimer;
+  document.getElementById("catNotes").addEventListener("input",e=>{
+    clearTimeout(notesTimer);
+    notesTimer=setTimeout(()=>saveCategorization({notes:e.target.value}),800);
+  });
+}
+
+async function saveCategorization(patch){
+  const statusEl=document.getElementById("catSaveStatus");
+  if(statusEl)statusEl.textContent="Saving...";
+  try{
+    const ref=doc(db,"users",currentUser.uid,"categorizations",currentSpan);
+    await setDoc(ref,{...patch,updatedAt:serverTimestamp()},{merge:true});
+    if(patch.status!==undefined){renderCategorizeWidget();return}
+    if(statusEl)statusEl.textContent="Saved.";
+  }catch(e){
+    if(statusEl)statusEl.textContent="Save failed: "+e.message;
+  }
+}
+
+window.onPropertyShown=d=>{currentSpan=d.span;renderCategorizeWidget()};
+window.onPropertyHidden=()=>{currentSpan=null};
+
+onAuthStateChanged(auth,user=>{
+  currentUser=user;
+  renderAuthBox();
+  renderCategorizeWidget();
+});
 </script>
 </body>
 </html>

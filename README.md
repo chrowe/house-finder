@@ -49,3 +49,7 @@ Then open http://localhost:8000/
 This is a static site (`index.html` + `data.json` + `meta.json` + `version.json` + `flood_zones_map.json`) — no build step. Push to GitHub, then in the repo's Settings → Pages, set the source to "Deploy from branch" / `main` / `root`.
 
 `meta.json` holds a `lastUpdated` timestamp, written by `merge.py`/`merge_listings.py`/`merge_flood.py`/`estimate_value.py` each time they regenerate `data.json`, and shown in the app header.
+
+## Categorizing properties (sign-in required)
+
+Sign in with Google (top right) to mark a property Interested/Maybe/Rejected/Visited and leave notes, synced across your devices via Firebase — the one deliberate exception to this being a pure static site with no backend. See [AGENTS.md](AGENTS.md) for the Firestore layout, security rules, and a manual setup step (authorizing the live domain) needed for sign-in to work once deployed.

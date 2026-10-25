@@ -153,6 +153,61 @@ rerun `python3 enrich.py` and it picks up where it left off. See [#3](https://gi
   Realtor.com data. Don't merge the two fields or drop the distinction to
   simplify the UI. See [#31](https://github.com/chrowe/house-finder/issues/31).
 
+## Firebase: the one real backend-touching piece (#46)
+
+Everything else in this app is static files with no backend — this is the
+deliberate exception, because cross-device categorization (favorite/reject/
+notes on a property, following you between your laptop and phone) genuinely
+needs a server-side store, and the user explicitly chose that tradeoff over
+the simpler single-browser `localStorage` option. Don't read this as license
+to add more backend dependencies for other features without a similar real
+need.
+
+- Loaded as a **separate `<script type="module">`** block after the main
+  classic script, not merged into it — the classic script has no idea
+  Firebase exists. It calls two hooks if they're defined
+  (`window.onPropertyShown(d)` / `window.onPropertyHidden()`) from
+  `showDetail()`/`hideDetail()`; the Firebase module defines those and reacts,
+  rather than the classic script reaching into Firebase internals. Keep this
+  decoupling if you touch either side — it's what let the (already large)
+  classic script stay untouched by a second, independently-testable concern.
+- Firestore layout: `users/{uid}/categorizations/{span}` →
+  `{status, notes, updatedAt}`. Keyed by the user's own `uid` so the security
+  rules can be a one-liner (see below) rather than per-document ACLs.
+- The `firebaseConfig` object (apiKey etc.) is **safe to commit publicly** —
+  Firebase's security model is enforced by Firestore rules, not by hiding
+  that key. Don't "fix" this by trying to hide/env-var it; there's no backend
+  here to keep a secret on anyway.
+- **Firestore security rules** (paste into the Firebase console under
+  Firestore Database → Rules — can't be set via the client SDK):
+  ```
+  rules_version = '2';
+  service cloud.firestore {
+    match /databases/{database}/documents {
+      match /users/{userId}/categorizations/{span} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+  }
+  ```
+- **Required manual step, not yet done as of this writing**: Firebase
+  auto-authorizes `localhost` and `*.firebaseapp.com` for sign-in, but
+  **not** the actual deployed domain. Add `chrowe.github.io` under
+  Authentication → Settings → Authorized domains in the Firebase console, or
+  sign-in will fail on the live site even though it works in local testing.
+- A `Cross-Origin-Opener-Policy policy would block the window.closed call`
+  console warning during `signInWithPopup` is a known, harmless Firebase/
+  Chrome interaction (confirmed via a real headless-browser test reaching
+  the actual `house-finder-28b58.firebaseapp.com/__/auth/handler` URL with no
+  functional error) — don't try to "fix" it.
+- Testing note: this environment has no real Google account to complete an
+  OAuth popup with, so the auth/Firestore round-trip was verified as far as
+  automation allows (real Firebase SDK loaded from gstatic.com against the
+  live project config, zero JS errors, sign-in popup correctly reaches
+  Firebase's real auth handler) but not end-to-end with a completed sign-in.
+  Do a real manual pass (sign in, categorize a property, refresh, check it
+  persisted, try a second browser/device) before trusting this fully.
+
 ## GitHub workflow in this repo
 
 - CHANGELOG.md is organized **by deploy** (one `## Build N` heading per PR),

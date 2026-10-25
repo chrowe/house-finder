@@ -9,6 +9,10 @@ tells you which build you're on and which is latest, so you can read down
 from the top and stop once you reach your own build number — everything
 above it is new since you last refreshed.
 
+## Build 26 — 2026-10-25 17:43 ET
+
+Added sign-in (Google) and property categorization — mark a property Interested/Maybe/Rejected/Visited with notes, synced across your devices. The first feature in this app backed by a real database (Firebase) rather than just static files.
+
 ## Build 25 — 2026-10-25 17:31 ET
 
 Added a "Find similar properties" button on the detail page — ranks other properties by type, beds/baths/acres/value/year built, and physical proximity (a simple normalized-distance comparison, not a learned model).
