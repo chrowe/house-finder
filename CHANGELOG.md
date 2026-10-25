@@ -6,6 +6,7 @@ roadmap and [AGENTS.md](AGENTS.md) for implementation notes.
 ## 2026-10-25
 
 - Base parcel data (owners, addresses, assessed/Grand List values) and flood zones now refresh automatically on a monthly schedule, via a reviewed pull request.
+- Added **Our estimate**, a rough value estimate (based on assessed value) for the ~2,000 properties with no real Realtor.com estimate — clearly labeled and kept separate from the real one.
 - Added a "What's new" / Changelog link to the header, always visible (not just inside the update banner).
 - Added an option to color map points by property type, flood risk, or listing status, with a legend.
 - Added a changelog, linked from the "new version available" banner.

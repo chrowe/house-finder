@@ -5,7 +5,7 @@ Context for any AI coding agent (or human) working on this project. See
 [README.md](README.md) for run/deploy instructions. This file is about how to
 work in the repo without repeating mistakes already made once.
 
-## The data pipeline is seven independent scripts, run in order
+## The data pipeline is eight independent scripts, run in order
 
 ```
 fetch.py          → data.json        (fast, ~1 request, safe to rerun anytime)
@@ -15,6 +15,7 @@ listings.py       → listings.json    (needs the homeharvest package — see ve
 merge_listings.py → data.json        (fast, joins listings.json onto data.json by address)
 flood.py          → flood_zones.json (fast, ~1 request, no rate limit — FEMA's NFHL service)
 merge_flood.py    → data.json        (fast, point-in-polygon of each parcel's centroid)
+estimate_value.py → data.json        (fast, pure computation — no network request at all)
 ```
 
 `flood.py`/`merge_flood.py` don't depend on anything else in the pipeline — run
@@ -53,6 +54,17 @@ run, `fetch.py` carries forward any enrichment fields (`beds`, `mktStatus`,
 `PARCID`, so a scheduled refresh doesn't silently delete assessor/listing data
 that was merged in locally. Don't "simplify" `fetch.py` back to a pure
 overwrite without re-solving this.
+
+## `estimate_value.py` is pure computation — no network, no rate-limit concerns
+
+`estimate_value.py` must run after `merge_listings.py` (it needs `mktEstValue`
+already joined in to know which parcels lack a real one), but has no other
+dependency and makes no network request — it just extrapolates a rough
+`ourEstValue` from each parcel's assessed value for parcels with no real
+Realtor.com estimate, using the median ratio of real estimate to assessed
+value observed across parcels that have both (split by property type where
+there's a trustworthy sample size, town-wide median otherwise). It prints the
+ratio(s) it used each run. See [#31](https://github.com/chrowe/house-finder/issues/31).
 
 `listings.py` needs a real Python environment (`homeharvest` pulls in pandas/numpy),
 and this system's `python3` has no `pip` and refuses system-wide installs
@@ -126,6 +138,12 @@ rerun `python3 enrich.py` and it picks up where it left off. See [#3](https://gi
   footprint — a parcel straddling a zone boundary can be misclassified either
   way. This is a reasonable approximation at parcel scale, not a bug to chase.
   See [#6](https://github.com/chrowe/house-finder/issues/6).
+- `ourEstValue` (`estimate_value.py`) is a rough extrapolation from assessed
+  value, not a real market estimate — it's only set on parcels that have no
+  real `mktEstValue`, and the UI must keep it visually/textually distinct
+  ("Our estimate" vs "Realtor.com est.") so it's never mistaken for real
+  Realtor.com data. Don't merge the two fields or drop the distinction to
+  simplify the UI. See [#31](https://github.com/chrowe/house-finder/issues/31).
 
 ## GitHub workflow in this repo
 
