@@ -9,6 +9,10 @@ tells you which build you're on and which is latest, so you can read down
 from the top and stop once you reach your own build number — everything
 above it is new since you last refreshed.
 
+## Build 22 — 2026-10-25 11:32 ET
+
+Added a "Show FEMA flood zones" toggle on the map, showing the actual flood zone shapes (not just which parcels fall in one) — simplified from FEMA's ~7.7MB source to ~350KB so it's a quick optional layer, not a slow default.
+
 ## Build 21 — 2026-10-25 11:18 ET
 
 Properties with no mapped flood risk now show "No flood risk" instead of a blank cell — the data was always there (every property defaults to minimal risk), it just wasn't being displayed.

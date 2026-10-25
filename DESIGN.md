@@ -38,7 +38,8 @@ enrich.py         → accounts.jsonl   (Montpelier assessor record cards, scrape
 merge.py          → data.json        (joins accounts.jsonl onto data.json by SPAN)
 listings.py       → listings.json    (Realtor.com listings, via HomeHarvest)
 merge_listings.py → data.json        (joins listings.json onto data.json by address)
-flood.py          → flood_zones.json (FEMA NFHL flood hazard zone polygons)
+flood.py          → flood_zones.json,     (FEMA NFHL flood hazard zone polygons: full-precision
+                    flood_zones_map.json   for classification + a simplified copy for the map)
 merge_flood.py    → data.json        (point-in-polygon: each parcel's centroid vs. flood_zones.json)
 estimate_value.py → data.json        (extrapolates ourEstValue from assessed value, for parcels with no real mktEstValue)
 ```
@@ -130,6 +131,8 @@ estimate_value.py → data.json        (extrapolates ourEstValue from assessed v
 - [x] Finish the full assessor scrape (#3)
 - [x] Fix condo SPAN join (#4) — 283 of 408 recovered via Parcel ID fallback
 - [x] Flood-zone filter (#6) — centroid-based, see limitations above
+- [x] Show actual flood zone shapes as a map layer (#68) — toggleable,
+      lazy-loaded, simplified to ~350KB from FEMA's ~7.7MB source
 - [x] Automate periodic data refresh (#8) — `fetch.py` + `flood.py`/
       `merge_flood.py` run monthly via GitHub Actions and open a PR; `enrich.py`
       and `listings.py` are intentionally left manual-only (rate-limit/ToS risk

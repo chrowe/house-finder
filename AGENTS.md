@@ -13,14 +13,22 @@ enrich.py         → accounts.jsonl   (slow, hours; resumable; see rate-limit n
 merge.py          → data.json        (fast, joins accounts.jsonl onto data.json by SPAN)
 listings.py       → listings.json    (needs the homeharvest package — see venv note below)
 merge_listings.py → data.json        (fast, joins listings.json onto data.json by address)
-flood.py          → flood_zones.json (fast, ~1 request, no rate limit — FEMA's NFHL service)
+flood.py          → flood_zones.json,     (fast, ~1 request, no rate limit — FEMA's NFHL service.
+                    flood_zones_map.json   Writes both: full-precision gitignored input for
+                                           merge_flood.py, and a simplified/committed one the
+                                           browser fetches for the optional map layer, #68 —
+                                           don't point index.html at flood_zones.json, it's ~7.7MB.)
 merge_flood.py    → data.json        (fast, point-in-polygon of each parcel's centroid)
 estimate_value.py → data.json        (fast, pure computation — no network request at all)
 ```
 
 `flood.py`/`merge_flood.py` don't depend on anything else in the pipeline — run
 in any order relative to the others. If Montpelier's parcel bounding box ever
-changes meaningfully (unlikely), widen the hardcoded `BBOX` in `flood.py`.
+changes meaningfully (unlikely), widen the hardcoded `BBOX` in `flood.py`. If
+you ever need to retune `flood.py`'s Douglas-Peucker `SIMPLIFY_TOLERANCE`,
+that only affects `flood_zones_map.json` (the map layer) — it never touches
+`flood_zones.json`, so parcel flood-risk classifications can't silently shift
+just because the map's simplification got more aggressive.
 
 ## `fetch.py` + `flood.py`/`merge_flood.py` are automated; the rest is still manual-only (#8)
 
