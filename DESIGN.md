@@ -34,6 +34,8 @@ enrich.py         → accounts.jsonl   (Montpelier assessor record cards, scrape
 merge.py          → data.json        (joins accounts.jsonl onto data.json by SPAN)
 listings.py       → listings.json    (Realtor.com listings, via HomeHarvest)
 merge_listings.py → data.json        (joins listings.json onto data.json by address)
+flood.py          → flood_zones.json (FEMA NFHL flood hazard zone polygons)
+merge_flood.py    → data.json        (point-in-polygon: each parcel's centroid vs. flood_zones.json)
 ```
 
 ## Data sources
@@ -57,6 +59,14 @@ merge_listings.py → data.json        (joins listings.json onto data.json by ad
    value, and a listing link. Only covers properties with a Realtor.com record
    from roughly the last 10 years, joined onto the base data by normalized street
    address (no shared ID exists). See [Known limitations](#known-limitations).
+
+4. **FEMA National Flood Hazard Layer (NFHL)** — flood risk (minimal/moderate/
+   high/floodway), via FEMA's public ArcGIS REST service
+   (`hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer/28`). Fast, no
+   rate limits (~177 polygons for Montpelier, one request). Joined by testing
+   each parcel's centroid against the zone polygons (`merge_flood.py`), not by
+   intersecting full parcel geometry — a parcel spanning a zone boundary is
+   classified by wherever its centroid happens to fall, not "any overlap."
 
 ## Known limitations
 
@@ -83,7 +93,9 @@ merge_listings.py → data.json        (joins listings.json onto data.json by ad
 - **No school-zone filter.** Montpelier is a single school district (one
   elementary, one high school), so this wouldn't meaningfully distinguish
   properties — intentionally skipped rather than deferred.
-- **No flood-zone filter yet.** Planned (#6), needs FEMA NFHL data.
+- **Flood risk is based on each parcel's centroid, not its full footprint.** A
+  large parcel straddling a flood zone boundary is classified by wherever its
+  single lat/lng point falls, which can misclassify edge cases either way. See #6.
 
 ## Roadmap
 
@@ -95,5 +107,5 @@ merge_listings.py → data.json        (joins listings.json onto data.json by ad
       #5 — coverage is partial by design, see limitations above)
 - [x] Finish the full assessor scrape (#3)
 - [x] Fix condo SPAN join (#4) — 283 of 408 recovered via Parcel ID fallback
-- [ ] Flood-zone filter (#6)
+- [x] Flood-zone filter (#6) — centroid-based, see limitations above
 - [ ] Automate periodic data refresh (#8)
