@@ -32,6 +32,7 @@ section{display:flex;flex-direction:column;min-width:0}
 table{border-collapse:collapse;width:100%}
 th,td{padding:6px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
 th{position:sticky;top:0;background:var(--card);cursor:pointer;user-select:none}
+.sort-arrow{color:var(--acc);font-size:10px}
 td.n,th.n{text-align:right}
 tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
 #more{display:block;margin:10px auto}
@@ -125,11 +126,14 @@ fetch('data.json').then(r=>r.json()).then(rows=>{
   const cs=[...new Set(data.map(d=>d.cat))].sort();
   $('catBox').innerHTML=cs.map(c=>`<label><input type="checkbox" class="catChk" value="${c}">${CATS[c]||c||'Unknown'}</label>`).join('');
   $('catBox').addEventListener('change',apply);
-  $('head').innerHTML=COLS.map(([k,l,n])=>`<th data-k="${k}" class="${n?'n':''}">${l}</th>`).join('');
-  $('head').onclick=e=>{const k=e.target.dataset.k;if(!k)return;sort=sort.k==k?{k,d:-sort.d}:{k,d:1};apply()};
+  renderHead();
+  $('head').onclick=e=>{const k=e.target.closest('th')?.dataset.k;if(!k)return;sort=sort.k==k?{k,d:-sort.d}:{k,d:1};renderHead();apply()};
   restoreFromUrl();
   apply();
 });
+function renderHead(){
+  $('head').innerHTML=COLS.map(([k,l,n])=>`<th data-k="${k}" class="${n?'n':''}">${l}${sort.k===k?`<span class="sort-arrow">${sort.d>0?' ▲':' ▼'}</span>`:''}</th>`).join('');
+}
 function apply(){
   const q=$('q').value.toLowerCase().trim(),hs=$('hs').value,imp=$('imp').value,mstatus=$('mstatus').value;
   const cats=[...document.querySelectorAll('.catChk:checked')].map(e=>e.value);
