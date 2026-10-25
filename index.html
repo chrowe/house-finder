@@ -88,6 +88,23 @@ function haversineMi([lat1,lng1],lat2,lng2){
   const a=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
+const FIELD_IDS=['q','vmin','vmax','amin','amax','hs','imp','beds','baths','ybmin','ybmax','spmin','spmax','dist'];
+function restoreFromUrl(){
+  const p=new URLSearchParams(location.search);
+  FIELD_IDS.forEach(id=>{if(p.has(id))$(id).value=p.get(id)});
+  if(p.has('cat')){
+    const want=new Set(p.get('cat').split(',').filter(Boolean));
+    document.querySelectorAll('.catChk').forEach(e=>{if(want.has(e.value))e.checked=true});
+  }
+}
+function updateUrl(){
+  const p=new URLSearchParams();
+  FIELD_IDS.forEach(id=>{const v=$(id).value;if(v!=='')p.set(id,v)});
+  const cats=[...document.querySelectorAll('.catChk:checked')].map(e=>e.value);
+  if(cats.length)p.set('cat',cats.join(','));
+  const qs=p.toString();
+  history.replaceState(null,'',qs?'?'+qs:location.pathname);
+}
 fetch('data.json').then(r=>r.json()).then(rows=>{
   data=rows.map(r=>({address:title(r.E911ADDR||r.LOCAPROP||r.DESCPROP),owner:title([r.OWNER1,r.OWNER2].filter(Boolean).join(' / ')),
     cat:r.CAT||'',value:r.REAL_FLV||0,land:r.LAND_LV||0,imp:r.IMPRV_LV||0,hs:r.HSTED_FLV||0,acres:r.ACRESGL||0,span:r.SPAN,lat:r.lat,lng:r.lng,desc:title(r.DESCPROP),
@@ -101,6 +118,7 @@ fetch('data.json').then(r=>r.json()).then(rows=>{
   $('style').innerHTML='<option value="">Any style</option>'+styles.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
   $('head').innerHTML=COLS.map(([k,l,n])=>`<th data-k="${k}" class="${n?'n':''}">${l}</th>`).join('');
   $('head').onclick=e=>{const k=e.target.dataset.k;if(!k)return;sort=sort.k==k?{k,d:-sort.d}:{k,d:1};apply()};
+  restoreFromUrl();
   apply();
 });
 function apply(){
@@ -123,7 +141,7 @@ function apply(){
     if(av==null)return 1;if(bv==null)return -1;
     return (typeof av=='number'?av-bv:String(av).localeCompare(String(bv),undefined,{numeric:true}))*d;
   });
-  shown=100;render();
+  shown=100;render();updateUrl();
 }
 function render(){
   $('count').textContent=`${view.length.toLocaleString()} of ${data.length.toLocaleString()} properties`;
