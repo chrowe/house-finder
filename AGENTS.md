@@ -5,7 +5,7 @@ Context for any AI coding agent (or human) working on this project. See
 [README.md](README.md) for run/deploy instructions. This file is about how to
 work in the repo without repeating mistakes already made once.
 
-## The data pipeline is five independent scripts, run in order
+## The data pipeline is seven independent scripts, run in order
 
 ```
 fetch.py          → data.json        (fast, ~1 request, safe to rerun anytime)
@@ -13,7 +13,13 @@ enrich.py         → accounts.jsonl   (slow, hours; resumable; see rate-limit n
 merge.py          → data.json        (fast, joins accounts.jsonl onto data.json by SPAN)
 listings.py       → listings.json    (needs the homeharvest package — see venv note below)
 merge_listings.py → data.json        (fast, joins listings.json onto data.json by address)
+flood.py          → flood_zones.json (fast, ~1 request, no rate limit — FEMA's NFHL service)
+merge_flood.py    → data.json        (fast, point-in-polygon of each parcel's centroid)
 ```
+
+`flood.py`/`merge_flood.py` don't depend on anything else in the pipeline — run
+in any order relative to the others. If Montpelier's parcel bounding box ever
+changes meaningfully (unlikely), widen the hardcoded `BBOX` in `flood.py`.
 
 `listings.py` needs a real Python environment (`homeharvest` pulls in pandas/numpy),
 and this system's `python3` has no `pip` and refuses system-wide installs
@@ -83,7 +89,10 @@ rerun `python3 enrich.py` and it picks up where it left off. See [#3](https://gi
   `enrich.py` still scrapes them (harmless), but `merge.py` deliberately drops
   them and there's no filter/column for them in the UI. Don't re-add one assuming
   it's a parsing bug ([#17](https://github.com/chrowe/house-finder/issues/17)).
-- No flood-zone data yet. See [#6](https://github.com/chrowe/house-finder/issues/6).
+- Flood risk is tested against each parcel's **centroid**, not its full
+  footprint — a parcel straddling a zone boundary can be misclassified either
+  way. This is a reasonable approximation at parcel scale, not a bug to chase.
+  See [#6](https://github.com/chrowe/house-finder/issues/6).
 
 ## GitHub workflow in this repo
 
