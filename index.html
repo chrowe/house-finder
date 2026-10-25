@@ -19,6 +19,9 @@ aside{padding:12px 16px;overflow:auto;border-right:1px solid var(--line);backgro
 aside label{display:block;margin:10px 0 3px;font-weight:600;font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
 input,select{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font:inherit}
 .row{display:flex;gap:6px}
+.chk-group{display:flex;flex-direction:column;gap:2px;max-height:160px;overflow:auto;border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:var(--bg)}
+.chk-group label{display:flex;align-items:center;gap:6px;margin:0;font-weight:400;font-size:13px;text-transform:none;letter-spacing:normal;color:var(--fg)}
+.chk-group input{width:auto}
 button{margin-top:14px;padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);cursor:pointer}
 .tabs{display:flex;gap:4px;padding:8px 12px 0}
 .tabs button{margin:0;border-bottom-left-radius:0;border-bottom-right-radius:0}
@@ -40,7 +43,7 @@ tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
 <main>
 <aside>
   <label>Search (address, owner, SPAN)</label><input id="q" type="search" placeholder="e.g. State St">
-  <label>Property type</label><select id="cat"></select>
+  <label>Property type</label><div id="catBox" class="chk-group"></div>
   <label>Assessed value ($)</label>
   <div class="row"><input id="vmin" type="number" placeholder="min"><input id="vmax" type="number" placeholder="max"></div>
   <label>Acres</label>
@@ -92,7 +95,8 @@ fetch('data.json').then(r=>r.json()).then(rows=>{
     dist:haversineMi(DOWNTOWN,r.lat,r.lng)}));
   data.forEach(d=>d.hay=(d.address+' '+d.owner+' '+d.span+' '+d.desc).toLowerCase());
   const cs=[...new Set(data.map(d=>d.cat))].sort();
-  $('cat').innerHTML='<option value="">All types</option>'+cs.map(c=>`<option value="${c}">${CATS[c]||c||'Unknown'}</option>`).join('');
+  $('catBox').innerHTML=cs.map(c=>`<label><input type="checkbox" class="catChk" value="${c}">${CATS[c]||c||'Unknown'}</label>`).join('');
+  $('catBox').addEventListener('change',apply);
   const styles=[...new Set(data.map(d=>d.style).filter(Boolean))].sort();
   $('style').innerHTML='<option value="">Any style</option>'+styles.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
   $('head').innerHTML=COLS.map(([k,l,n])=>`<th data-k="${k}" class="${n?'n':''}">${l}</th>`).join('');
@@ -100,11 +104,12 @@ fetch('data.json').then(r=>r.json()).then(rows=>{
   apply();
 });
 function apply(){
-  const q=$('q').value.toLowerCase().trim(),cat=$('cat').value,hs=$('hs').value,imp=$('imp').value,style=$('style').value;
+  const q=$('q').value.toLowerCase().trim(),hs=$('hs').value,imp=$('imp').value,style=$('style').value;
+  const cats=[...document.querySelectorAll('.catChk:checked')].map(e=>e.value);
   const n=id=>$(id).value===''?null:+$(id).value;
   const vmin=n('vmin'),vmax=n('vmax'),amin=n('amin'),amax=n('amax');
   const bedsMin=n('beds'),bathsMin=n('baths'),ybmin=n('ybmin'),ybmax=n('ybmax'),spmin=n('spmin'),spmax=n('spmax'),distMax=n('dist');
-  view=data.filter(d=>(!q||d.hay.includes(q))&&(!cat||d.cat===cat)&&(vmin==null||d.value>=vmin)&&(vmax==null||d.value<=vmax)
+  view=data.filter(d=>(!q||d.hay.includes(q))&&(cats.length===0||cats.includes(d.cat))&&(vmin==null||d.value>=vmin)&&(vmax==null||d.value<=vmax)
     &&(amin==null||d.acres>=amin)&&(amax==null||d.acres<=amax)&&(!hs||(hs=='y')==(d.hs>0))&&(!imp||(imp=='y')==(d.imp>0))
     &&(bedsMin==null||d.beds>=bedsMin)&&(bathsMin==null||d.baths>=bathsMin)
     &&(ybmin==null||d.yearBuilt>=ybmin)&&(ybmax==null||d.yearBuilt<=ybmax)
@@ -128,8 +133,12 @@ function render(){
 }
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 $('more').onclick=()=>{shown+=200;render()};
-['q','cat','vmin','vmax','amin','amax','hs','imp','beds','baths','ybmin','ybmax','style','spmin','spmax','dist'].forEach(id=>$(id).addEventListener('input',apply));
-$('reset').onclick=()=>{document.querySelectorAll('aside input,aside select').forEach(e=>e.value='');apply()};
+['q','vmin','vmax','amin','amax','hs','imp','beds','baths','ybmin','ybmax','style','spmin','spmax','dist'].forEach(id=>$(id).addEventListener('input',apply));
+$('reset').onclick=()=>{
+  document.querySelectorAll('aside input:not([type=checkbox]),aside select').forEach(e=>e.value='');
+  document.querySelectorAll('.catChk').forEach(e=>e.checked=false);
+  apply();
+};
 function drawMap(){
   layer.clearLayers();
   view.filter(d=>d.lat).forEach(d=>L.circleMarker([d.lat,d.lng],{radius:4,weight:1,color:'#1f6f4a',fillOpacity:.6})
