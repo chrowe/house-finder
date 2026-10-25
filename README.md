@@ -8,8 +8,9 @@ See [DESIGN.md](DESIGN.md) for the full design doc and roadmap.
 
 - **Vermont VCGI statewide parcel data** (`fetch.py` → `data.json`): every parcel in Montpelier with owner, address, acreage, property type, and Grand List (assessed) values. Covers all ~3,020 parcels regardless of whether they're for sale.
 - **Montpelier assessor record cards** via Patriot Properties (`enrich.py` → `accounts.jsonl`, merged in by `merge.py`): adds bedrooms, bathrooms, year built, building style, and last sale price/date where available.
+- **Realtor.com listing data** via the [HomeHarvest](https://github.com/ZacharyHampton/HomeHarvest) package (`listings.py` → `listings.json`, merged in by `merge_listings.py`): adds listing status (for sale/pending/sold/etc.), list price, an estimated market value, and a link to the listing, joined by normalized street address (there's no shared ID with this source). ⚠️ This scrapes Realtor.com, which almost certainly prohibits it in their Terms of Service — accepted here only as personal, non-commercial, low-volume use for one person's house search. See [AGENTS.md](AGENTS.md).
 
-"For sale" status isn't tracked yet — these are public assessment records, not live listings. See [DESIGN.md](DESIGN.md) for what's planned next.
+Most properties won't have listing data — it only covers ones with a Realtor.com record in roughly the last 10 years.
 
 ## Rebuilding the data
 
@@ -20,6 +21,12 @@ python3 enrich.py      # scrape assessor record-card details (slow & resumable �
                         # ~1 request every 2-3s and can take a few hours; safe to
                         # stop and rerun, it picks up where it left off)
 python3 merge.py       # join enrich.py's output onto data.json
+
+# listings.py needs the homeharvest package, which needs a real venv (this
+# system's python3 has no pip and blocks system-wide installs — see AGENTS.md):
+uv venv .venv && uv pip install --python .venv/bin/python homeharvest
+.venv/bin/python listings.py   # pulls ~10 years of Realtor.com listing history
+python3 merge_listings.py      # join listings.json onto data.json (plain python3 is fine, no homeharvest import)
 ```
 
 ## Running locally

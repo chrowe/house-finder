@@ -2,3 +2,7 @@ __pycache__/
 *.pyc
 enrich.log
 cookies*.txt
+accounts.jsonl
+letters_done.txt
+.venv/
+listings.json
