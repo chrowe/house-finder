@@ -98,3 +98,9 @@ rerun `python3 enrich.py` and it picks up where it left off. See [#3](https://gi
 - Don't commit `accounts.jsonl`, `letters_done.txt`, `enrich.log`, or `cookies*`
   — they're gitignored on purpose (regenerable scrape state/logs, not shipped
   product). `data.json` **is** committed — it's the actual content the site serves.
+- GitHub Pages serves everything through a CDN (Fastly) with `cache-control:
+  max-age=600`. Confirmed (via curl) that it ignores a cache-busting query
+  string *and* a client `Cache-Control: no-cache` header — there's no way to
+  force a bypass from client-side JS. A deploy can take up to ~10 minutes to
+  actually be visible on the live site; this is a hard ceiling, not a bug to
+  chase. See [#48](https://github.com/chrowe/house-finder/issues/48).
