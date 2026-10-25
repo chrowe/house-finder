@@ -36,14 +36,14 @@ def main():
         if not pr:
             continue
         matched += 1
+        # style/exterior/roof are scraped but omitted here: Montpelier's record cards
+        # have never populated them (100% "N/A" across every account scraped so far).
         p["beds"] = to_int(pr.get("bedrooms"))
         p["baths"] = to_int(pr.get("baths"))
         p["halfBaths"] = to_int(pr.get("half_baths"))
         p["threeQtrBaths"] = to_int(pr.get("three_qtr_baths"))
         yb = to_int(pr.get("year_built"))
         p["yearBuilt"] = yb if yb and yb > 1600 else None
-        style = (pr.get("style") or "").strip()
-        p["style"] = style if style and style != "N/A" else None
         p["rooms"] = to_int(pr.get("rooms"))
         p["units"] = to_int(pr.get("units"))
         p["lastSalePrice"] = to_int(pr.get("salePrice"))

@@ -58,7 +58,6 @@ tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
   <select id="baths"><option value="">Any</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option><option value="4">4+</option></select>
   <label>Year built</label>
   <div class="row"><input id="ybmin" type="number" placeholder="min"><input id="ybmax" type="number" placeholder="max"></div>
-  <label>Building style</label><select id="style"></select>
   <label>Last sale price ($)</label>
   <div class="row"><input id="spmin" type="number" placeholder="min"><input id="spmax" type="number" placeholder="max"></div>
   <label>Distance to downtown (mi)</label>
@@ -76,7 +75,7 @@ tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
 <script>
 const CATS={R1:'Residential (<6 ac)',R2:'Residential (6+ ac)',C:'Commercial',CA:'Commercial apartments',O:'Other / condo',M:'Mobile home (landed)',MHL:'Mobile home (leased land)',I:'Industrial',UE:'Utility – electric',S1:'Seasonal'};
 const DOWNTOWN=[44.2601,-72.5754]; // Vermont State House, Montpelier
-const COLS=[['address','Address'],['owner','Owner'],['cat','Type'],['value','Assessed $',1],['beds','Beds',1],['baths','Baths',1],['yearBuilt','Year',1],['style','Style'],['lastSalePrice','Last Sale $',1],['lastSaleDate','Sale Date'],['acres','Acres',1],['dist','Dist (mi)',1],['span','SPAN']];
+const COLS=[['address','Address'],['owner','Owner'],['cat','Type'],['value','Assessed $',1],['beds','Beds',1],['baths','Baths',1],['yearBuilt','Year',1],['lastSalePrice','Last Sale $',1],['lastSaleDate','Sale Date'],['acres','Acres',1],['dist','Dist (mi)',1],['span','SPAN']];
 const $=id=>document.getElementById(id);
 const fmt=n=>n==null?'':'$'+n.toLocaleString();
 let data=[],view=[],sort={k:'address',d:1},shown=100,map,layer;
@@ -91,20 +90,18 @@ function haversineMi([lat1,lng1],lat2,lng2){
 fetch('data.json').then(r=>r.json()).then(rows=>{
   data=rows.map(r=>({address:title(r.E911ADDR||r.LOCAPROP||r.DESCPROP),owner:title([r.OWNER1,r.OWNER2].filter(Boolean).join(' / ')),
     cat:r.CAT||'',value:r.REAL_FLV||0,land:r.LAND_LV||0,imp:r.IMPRV_LV||0,hs:r.HSTED_FLV||0,acres:r.ACRESGL||0,span:r.SPAN,lat:r.lat,lng:r.lng,desc:title(r.DESCPROP),
-    beds:r.beds??null,baths:r.baths??null,yearBuilt:r.yearBuilt??null,style:r.style||'',lastSalePrice:r.lastSalePrice??null,lastSaleDate:r.lastSaleDate||'',
+    beds:r.beds??null,baths:r.baths??null,yearBuilt:r.yearBuilt??null,lastSalePrice:r.lastSalePrice??null,lastSaleDate:r.lastSaleDate||'',
     dist:haversineMi(DOWNTOWN,r.lat,r.lng)}));
   data.forEach(d=>d.hay=(d.address+' '+d.owner+' '+d.span+' '+d.desc).toLowerCase());
   const cs=[...new Set(data.map(d=>d.cat))].sort();
   $('catBox').innerHTML=cs.map(c=>`<label><input type="checkbox" class="catChk" value="${c}">${CATS[c]||c||'Unknown'}</label>`).join('');
   $('catBox').addEventListener('change',apply);
-  const styles=[...new Set(data.map(d=>d.style).filter(Boolean))].sort();
-  $('style').innerHTML='<option value="">Any style</option>'+styles.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
   $('head').innerHTML=COLS.map(([k,l,n])=>`<th data-k="${k}" class="${n?'n':''}">${l}</th>`).join('');
   $('head').onclick=e=>{const k=e.target.dataset.k;if(!k)return;sort=sort.k==k?{k,d:-sort.d}:{k,d:1};apply()};
   apply();
 });
 function apply(){
-  const q=$('q').value.toLowerCase().trim(),hs=$('hs').value,imp=$('imp').value,style=$('style').value;
+  const q=$('q').value.toLowerCase().trim(),hs=$('hs').value,imp=$('imp').value;
   const cats=[...document.querySelectorAll('.catChk:checked')].map(e=>e.value);
   const n=id=>$(id).value===''?null:+$(id).value;
   const vmin=n('vmin'),vmax=n('vmax'),amin=n('amin'),amax=n('amax');
@@ -113,7 +110,6 @@ function apply(){
     &&(amin==null||d.acres>=amin)&&(amax==null||d.acres<=amax)&&(!hs||(hs=='y')==(d.hs>0))&&(!imp||(imp=='y')==(d.imp>0))
     &&(bedsMin==null||d.beds>=bedsMin)&&(bathsMin==null||d.baths>=bathsMin)
     &&(ybmin==null||d.yearBuilt>=ybmin)&&(ybmax==null||d.yearBuilt<=ybmax)
-    &&(!style||d.style===style)
     &&(spmin==null||d.lastSalePrice>=spmin)&&(spmax==null||d.lastSalePrice<=spmax)
     &&(distMax==null||(d.dist!=null&&d.dist<=distMax)));
   const {k,d}=sort;
@@ -127,13 +123,13 @@ function apply(){
 }
 function render(){
   $('count').textContent=`${view.length.toLocaleString()} of ${data.length.toLocaleString()} properties`;
-  $('body').innerHTML=view.slice(0,shown).map(d=>`<tr><td>${esc(d.address)}</td><td>${esc(d.owner)}</td><td>${CATS[d.cat]||d.cat}</td><td class="n">${fmt(d.value)}</td><td class="n">${d.beds??''}</td><td class="n">${d.baths??''}</td><td class="n">${d.yearBuilt??''}</td><td>${esc(d.style)}</td><td class="n">${fmt(d.lastSalePrice)}</td><td>${esc(d.lastSaleDate)}</td><td class="n">${d.acres.toFixed(2)}</td><td class="n">${d.dist!=null?d.dist.toFixed(1):''}</td><td>${esc(d.span)}</td></tr>`).join('');
+  $('body').innerHTML=view.slice(0,shown).map(d=>`<tr><td>${esc(d.address)}</td><td>${esc(d.owner)}</td><td>${CATS[d.cat]||d.cat}</td><td class="n">${fmt(d.value)}</td><td class="n">${d.beds??''}</td><td class="n">${d.baths??''}</td><td class="n">${d.yearBuilt??''}</td><td class="n">${fmt(d.lastSalePrice)}</td><td>${esc(d.lastSaleDate)}</td><td class="n">${d.acres.toFixed(2)}</td><td class="n">${d.dist!=null?d.dist.toFixed(1):''}</td><td>${esc(d.span)}</td></tr>`).join('');
   $('more').style.display=view.length>shown?'block':'none';
   if(map&&$('map').style.display=='block')drawMap();
 }
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 $('more').onclick=()=>{shown+=200;render()};
-['q','vmin','vmax','amin','amax','hs','imp','beds','baths','ybmin','ybmax','style','spmin','spmax','dist'].forEach(id=>$(id).addEventListener('input',apply));
+['q','vmin','vmax','amin','amax','hs','imp','beds','baths','ybmin','ybmax','spmin','spmax','dist'].forEach(id=>$(id).addEventListener('input',apply));
 $('reset').onclick=()=>{
   document.querySelectorAll('aside input:not([type=checkbox]),aside select').forEach(e=>e.value='');
   document.querySelectorAll('.catChk').forEach(e=>e.checked=false);
