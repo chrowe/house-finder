@@ -1,0 +1,83 @@
+name: Refresh parcel + flood data
+
+# Automates the parts of the data pipeline that are safe to run unattended:
+#   fetch.py (VCGI parcel/Grand List data) and flood.py/merge_flood.py (FEMA
+#   flood zones). Both hit fast, unrate-limited public APIs.
+#
+# Deliberately NOT included here (see AGENTS.md / DESIGN.md):
+#   - enrich.py: scrapes Montpelier's assessor site (Patriot Properties), which
+#     rate-limits aggressively and has IP-blocked this project twice already.
+#     Running it from a shared CI runner IP risks tripping that block for
+#     everyone, and a scraper running from generic cloud infrastructure is a
+#     bad look regardless. Stays manual-only, run from a real machine.
+#   - listings.py: scrapes Realtor.com, accepted only as personal,
+#     non-commercial, low-volume use. Never run on a schedule or from CI.
+#   - merge.py / merge_listings.py: both need accounts.jsonl / listings.json,
+#     which are gitignored and only ever exist after a manual enrich.py /
+#     listings.py run on someone's own machine — a CI runner starting from a
+#     clean checkout never has them.
+#
+# fetch.py preserves any enrichment fields (beds, mktStatus, floodRisk, etc.)
+# already present in the committed data.json for a given PARCID, so this
+# workflow refreshes VCGI/flood data without wiping out locally-merged
+# assessor/listing data (#8).
+#
+# Opens a PR instead of committing straight to main, so a human glances at
+# what changed (new/removed parcels, updated assessed values) before it ships.
+
+on:
+  schedule:
+    # 06:00 UTC on the 1st of each month. Grand List / assessed values update
+    # roughly annually on the town's assessment cycle, so monthly is plenty.
+    - cron: '0 6 1 * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Refresh VCGI parcel data
+        run: python3 fetch.py
+
+      - name: Refresh FEMA flood zone polygons
+        run: python3 flood.py
+
+      - name: Re-join flood zones onto parcel data
+        run: python3 merge_flood.py
+
+      - name: Open PR with refreshed data
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: 'Automated data refresh: fetch.py + flood.py/merge_flood.py'
+          title: 'Automated data refresh (VCGI + flood zones)'
+          body: |
+            Scheduled/automated refresh of `data.json`:
+
+            - `fetch.py` — latest VCGI parcel data (owners, addresses, assessed/Grand
+              List values, new/removed parcels).
+            - `flood.py` + `merge_flood.py` — latest FEMA flood hazard zones.
+
+            Assessor record-card data (beds/baths/sale history) and Realtor.com listing
+            data are **not** touched by this workflow — `fetch.py` preserves whatever
+            was already merged into `data.json` for each parcel (see #8). Those still
+            require a manual `enrich.py` / `listings.py` run.
+
+            Please review the diff (mainly assessed values and any new/removed
+            parcels) before merging.
+          branch: automated-data-refresh
+          delete-branch: true
+          add-paths: |
+            data.json
+            meta.json

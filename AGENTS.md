@@ -21,6 +21,39 @@ merge_flood.py    → data.json        (fast, point-in-polygon of each parcel's 
 in any order relative to the others. If Montpelier's parcel bounding box ever
 changes meaningfully (unlikely), widen the hardcoded `BBOX` in `flood.py`.
 
+## `fetch.py` + `flood.py`/`merge_flood.py` are automated; the rest is still manual-only (#8)
+
+`.github/workflows/refresh-data.yml` runs `fetch.py`, `flood.py`, and
+`merge_flood.py` monthly (and on manual `workflow_dispatch`), and opens a PR
+with the result rather than committing straight to `main` — this is a
+personal project, and a human should glance at the diff (assessed values,
+new/removed parcels) before it ships.
+
+Only these two are automated because they're the only parts of the pipeline
+that are both fast and unrate-limited. `enrich.py` and `listings.py` are
+**not** automated and shouldn't be:
+
+- `enrich.py` scrapes Patriot Properties, which has already IP-blocked this
+  project twice (see below) at paces that seemed reasonable — running it from
+  a GitHub Actions runner's shared, rotating IP range is a materially worse
+  look to a rate-limiter than a residential IP, and there's no way to recover
+  gracefully from a block in CI.
+- `listings.py` scrapes Realtor.com, accepted only as personal, non-commercial,
+  low-volume use (see below) — scheduling it from CI would mean treating that
+  ToS risk as resolved, which it isn't.
+
+A CI runner also starts from a clean checkout with no `accounts.jsonl` or
+`listings.json` (both gitignored, never committed), so `merge.py` and
+`merge_listings.py` can't run there regardless — only someone's own machine,
+after a manual `enrich.py`/`listings.py` run, has what they need.
+
+Because the automated job rebuilds `data.json` from VCGI from scratch every
+run, `fetch.py` carries forward any enrichment fields (`beds`, `mktStatus`,
+`floodRisk`, etc.) already present in the committed `data.json` for a given
+`PARCID`, so a scheduled refresh doesn't silently delete assessor/listing data
+that was merged in locally. Don't "simplify" `fetch.py` back to a pure
+overwrite without re-solving this.
+
 `listings.py` needs a real Python environment (`homeharvest` pulls in pandas/numpy),
 and this system's `python3` has no `pip` and refuses system-wide installs
 (PEP 668 "externally-managed-environment", and there's no sudo access to fix that
