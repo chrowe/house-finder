@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
 enrich.log
+backfill_sqft.log
 cookies*.txt
 accounts.jsonl
 letters_done.txt

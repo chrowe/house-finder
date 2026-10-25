@@ -47,7 +47,12 @@ def narrative_fields(html):
     vals += [""] * (len(keys) - len(vals))
     return dict(zip(keys, vals[:len(keys)]))
 
-def parse_record(html, account_number):
+def finished_area_sf(html):
+    # Only on RecordCard.asp (the "Printable Record Card"), not summary-bottom.asp.
+    m = re.search(r'Finished\s+Area\s*\(SF\).*?color="blue"[^>]*>([^<]*)', html, re.S)
+    return (m.group(1) or "").strip() if m else ""
+
+def parse_record(html, record_card_html, account_number):
     span = field(html, "Property Account Number")
     if not span:
         return None
@@ -70,6 +75,7 @@ def parse_record(html, account_number):
         "totalValue": field(html, "Total Value"),
     }
     rec.update(narrative_fields(html))
+    rec["finishedAreaSf"] = finished_area_sf(record_card_html)
     return rec
 
 def load_set(path, key=str):
@@ -135,7 +141,10 @@ def fetch_account(s, n):
     r2 = polite_get(s, f"{BASE}/summary-bottom.asp")
     if r2 is None:
         return None
-    return parse_record(r2.text, n)
+    r3 = polite_get(s, f"{BASE}/RecordCard.asp")
+    if r3 is None:
+        return None
+    return parse_record(r2.text, r3.text, n)
 
 def main():
     done_accounts = already_done_accounts()
