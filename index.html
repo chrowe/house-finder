@@ -64,7 +64,7 @@ tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
 </head>
 <body>
 <div id="updateBanner"><span>A new version of this app is available.</span><a href="https://github.com/chrowe/house-finder/blob/main/CHANGELOG.md" target="_blank" rel="noopener">What's new</a><button onclick="location.reload()">Refresh</button><button onclick="$('updateBanner').style.display='none'">Dismiss</button></div>
-<header><h1>Montpelier, VT — Property Finder</h1><span id="count"></span><span id="updated" style="font-size:12px;color:var(--mut)"></span><span id="authBox" style="margin-left:auto;font-size:12px"></span><a href="https://github.com/chrowe/house-finder/blob/main/CHANGELOG.md" target="_blank" rel="noopener" style="font-size:12px;color:var(--mut)">Changelog</a><a href="https://github.com/chrowe/house-finder/issues/new" target="_blank" rel="noopener" style="font-size:12px;color:var(--mut)">Suggest a feature / report a bug</a></header>
+<header><h1>Montpelier, VT — Property Finder</h1><span id="count"></span><span id="updated" style="font-size:12px;color:var(--mut)"></span><a href="https://github.com/chrowe/house-finder/blob/main/CHANGELOG.md" target="_blank" rel="noopener" style="margin-left:auto;font-size:12px;color:var(--mut)">Changelog</a><a href="https://github.com/chrowe/house-finder/issues/new" target="_blank" rel="noopener" style="font-size:12px;color:var(--mut)">Suggest a feature / report a bug</a></header>
 <main id="main">
 <aside>
   <label>Search (address, owner, SPAN)</label><input id="q" type="search" placeholder="e.g. State St">
@@ -551,20 +551,26 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 window.addEventListener('focus',checkForUpdate);
 </script>
 <script type="module">
-// Cross-device categorization (#46). A separate module script, decoupled
-// from the classic script above via two small hooks it calls
+// Cross-device categorization (#46, #79). A separate module script,
+// decoupled from the classic script above via two small hooks it calls
 // (window.onPropertyShown/onPropertyHidden) rather than this script reaching
 // into that one's internals - keeps the already-large classic script from
 // needing to know anything about Firebase.
 //
-// Firestore layout: users/{uid}/categorizations/{span} -> {status, notes,
-// updatedAt}. Security rules (paste into the Firebase console under
-// Firestore Database -> Rules) restrict each user to their own subtree -
-// see AGENTS.md for the exact rules text. The config below is safe to
-// commit publicly; Firebase's security model is enforced by those rules,
-// not by keeping this key secret.
+// No real sign-in: this is a single-user tool, so Google Sign-In (#46's
+// original design) was pure friction for zero benefit, and its one real
+// requirement - authorizing the live domain in the Firebase console - never
+// got done, so it was simply broken on the deployed site. Firebase Anonymous
+// Auth establishes a session silently on load (no popup, no authorized-
+// domain requirement) purely so Firestore rules can require
+// `request.auth != null` - a low bar that blocks nothing determined, but
+// stops the most casual drive-by writes. Firestore layout is now one flat
+// shared collection, not per-uid: categorizations/{span} -> {status, notes,
+// updatedAt}. See AGENTS.md for the rules text (paste into the Firebase
+// console - can't be set via the client SDK) and the accepted tradeoff of
+// a fully shared, unauthenticated-identity store for low-stakes data.
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
-import {getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
+import {getAuth,signInAnonymously,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
 import {getFirestore,doc,getDoc,setDoc,serverTimestamp} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 
 const firebaseConfig={
@@ -582,40 +588,33 @@ const db=getFirestore(app);
 const STATUSES=[["interested","Interested"],["maybe","Maybe"],["rejected","Rejected"],["visited","Visited"]];
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
-let currentUser=null;
+let authReady=false;
+let authError=null;
 // Read directly from the URL rather than from the classic script's DOM
 // state, since module scripts are deferred and there's no guaranteed
 // ordering between this initializing and the classic script's own fetch of
 // data.json resolving and calling showDetailFromUrl().
 let currentSpan=new URLSearchParams(location.search).get("span")||null;
 
-function renderAuthBox(){
-  const box=document.getElementById("authBox");
-  if(!box)return;
-  if(currentUser){
-    box.innerHTML=`${esc(currentUser.displayName||currentUser.email)} <button id="signOutBtn" style="margin-left:6px">Sign out</button>`;
-    document.getElementById("signOutBtn").onclick=()=>signOut(auth);
-  }else{
-    box.innerHTML=`<button id="signInBtn">Sign in with Google</button>`;
-    document.getElementById("signInBtn").onclick=()=>signInWithPopup(auth,new GoogleAuthProvider()).catch(e=>alert("Sign-in failed: "+e.message));
-  }
-}
-
 async function renderCategorizeWidget(){
   const el=document.getElementById("categorizeWidget");
   if(!el||!currentSpan)return;
-  if(!currentUser){
-    el.innerHTML=`<div style="color:var(--mut);font-size:13px">Sign in (top right) to categorize this property - interested/maybe/rejected/visited, with notes, synced across your devices.</div>`;
+  if(authError){
+    el.innerHTML=`<div style="color:#c0392b;font-size:13px">Couldn't connect: ${esc(authError)}</div>`;
     return;
   }
-  el.innerHTML=`<div style="color:var(--mut);font-size:13px">Loading your notes...</div>`;
-  const ref=doc(db,"users",currentUser.uid,"categorizations",currentSpan);
+  if(!authReady){
+    el.innerHTML=`<div style="color:var(--mut);font-size:13px">Connecting...</div>`;
+    return;
+  }
+  el.innerHTML=`<div style="color:var(--mut);font-size:13px">Loading notes...</div>`;
+  const ref=doc(db,"categorizations",currentSpan);
   let saved={};
   try{
     const snap=await getDoc(ref);
     if(snap.exists())saved=snap.data();
   }catch(e){
-    el.innerHTML=`<div style="color:#c0392b;font-size:13px">Couldn't load your notes: ${esc(e.message)}</div>`;
+    el.innerHTML=`<div style="color:#c0392b;font-size:13px">Couldn't load notes: ${esc(e.message)}</div>`;
     return;
   }
   el.innerHTML=`
@@ -638,7 +637,7 @@ async function saveCategorization(patch){
   const statusEl=document.getElementById("catSaveStatus");
   if(statusEl)statusEl.textContent="Saving...";
   try{
-    const ref=doc(db,"users",currentUser.uid,"categorizations",currentSpan);
+    const ref=doc(db,"categorizations",currentSpan);
     await setDoc(ref,{...patch,updatedAt:serverTimestamp()},{merge:true});
     if(patch.status!==undefined){renderCategorizeWidget();return}
     if(statusEl)statusEl.textContent="Saved.";
@@ -650,9 +649,15 @@ async function saveCategorization(patch){
 window.onPropertyShown=d=>{currentSpan=d.span;renderCategorizeWidget()};
 window.onPropertyHidden=()=>{currentSpan=null};
 
+signInAnonymously(auth).catch(e=>{
+  console.error("Firebase anonymous sign-in failed:",e);
+  authError=e.code==="auth/admin-restricted-operation"
+    ?"Anonymous sign-in isn't enabled on this Firebase project yet (Authentication → Sign-in method → Anonymous)."
+    :e.message;
+  renderCategorizeWidget();
+});
 onAuthStateChanged(auth,user=>{
-  currentUser=user;
-  renderAuthBox();
+  authReady=!!user;
   renderCategorizeWidget();
 });
 </script>

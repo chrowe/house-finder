@@ -153,7 +153,7 @@ rerun `python3 enrich.py` and it picks up where it left off. See [#3](https://gi
   Realtor.com data. Don't merge the two fields or drop the distinction to
   simplify the UI. See [#31](https://github.com/chrowe/house-finder/issues/31).
 
-## Firebase: the one real backend-touching piece (#46)
+## Firebase: the one real backend-touching piece (#46, #79)
 
 Everything else in this app is static files with no backend — this is the
 deliberate exception, because cross-device categorization (favorite/reject/
@@ -163,6 +163,20 @@ the simpler single-browser `localStorage` option. Don't read this as license
 to add more backend dependencies for other features without a similar real
 need.
 
+**No real sign-in.** The original design used Google Sign-In, but this is a
+single-user tool — there's no actual multi-tenancy need, and Google auth's
+one real requirement (authorizing the live domain in the Firebase console)
+never got done, so it was simply broken on the deployed site. Replaced with
+Firebase **Anonymous Auth**: a session gets established silently on page
+load (no popup, no authorized-domain requirement), purely so Firestore rules
+can require `request.auth != null` — a low bar that blocks nothing
+determined, but stops the most casual drive-by writes. Data lives in one
+flat **shared** collection, not per-uid: `categorizations/{span}` →
+`{status, notes, updatedAt}`. If you ever bring back a notion of "whose
+categorization is this," that's a real design change (schema + rules both),
+not a tweak — don't casually add a `uid` field back in without rethinking
+the rules too.
+
 - Loaded as a **separate `<script type="module">`** block after the main
   classic script, not merged into it — the classic script has no idea
   Firebase exists. It calls two hooks if they're defined
@@ -171,9 +185,6 @@ need.
   rather than the classic script reaching into Firebase internals. Keep this
   decoupling if you touch either side — it's what let the (already large)
   classic script stay untouched by a second, independently-testable concern.
-- Firestore layout: `users/{uid}/categorizations/{span}` →
-  `{status, notes, updatedAt}`. Keyed by the user's own `uid` so the security
-  rules can be a one-liner (see below) rather than per-document ACLs.
 - The `firebaseConfig` object (apiKey etc.) is **safe to commit publicly** —
   Firebase's security model is enforced by Firestore rules, not by hiding
   that key. Don't "fix" this by trying to hide/env-var it; there's no backend
@@ -184,29 +195,33 @@ need.
   rules_version = '2';
   service cloud.firestore {
     match /databases/{database}/documents {
-      match /users/{userId}/categorizations/{span} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+      match /categorizations/{span} {
+        allow read, write: if request.auth != null;
       }
     }
   }
   ```
-- **Required manual step, not yet done as of this writing**: Firebase
-  auto-authorizes `localhost` and `*.firebaseapp.com` for sign-in, but
-  **not** the actual deployed domain. Add `chrowe.github.io` under
-  Authentication → Settings → Authorized domains in the Firebase console, or
-  sign-in will fail on the live site even though it works in local testing.
-- A `Cross-Origin-Opener-Policy policy would block the window.closed call`
-  console warning during `signInWithPopup` is a known, harmless Firebase/
-  Chrome interaction (confirmed via a real headless-browser test reaching
-  the actual `house-finder-28b58.firebaseapp.com/__/auth/handler` URL with no
-  functional error) — don't try to "fix" it.
-- Testing note: this environment has no real Google account to complete an
-  OAuth popup with, so the auth/Firestore round-trip was verified as far as
-  automation allows (real Firebase SDK loaded from gstatic.com against the
-  live project config, zero JS errors, sign-in popup correctly reaches
-  Firebase's real auth handler) but not end-to-end with a completed sign-in.
-  Do a real manual pass (sign in, categorize a property, refresh, check it
-  persisted, try a second browser/device) before trusting this fully.
+  This is intentionally wide open to anyone who loads the page (any real
+  browser gets an anonymous session automatically) — accepted because the
+  data here is low-stakes (just status tags/notes, nothing financial or
+  personal) and this is a single-user tool with no realistic adversary.
+  Don't tighten this into something that silently breaks the "everyone
+  shares one database" design without a real reason.
+- **Required manual step, not yet done as of this writing**: Anonymous Auth
+  must be enabled as a sign-in provider — Firebase console → Authentication
+  → Sign-in method → add **Anonymous** → Enable. Without this, every attempt
+  fails with `auth/admin-restricted-operation` (confirmed via a real
+  headless-browser test against the live project) and the categorize widget
+  shows an explicit "Anonymous sign-in isn't enabled..." error rather than
+  hanging — don't mistake that error message for a code bug if you see it;
+  it means this console step hasn't been done yet.
+- Testing note: this environment can't toggle Firebase console settings, so
+  the full save/load round-trip couldn't be verified end-to-end — confirmed
+  via a real headless browser (not mocked) that the real SDK loads against
+  the live project with zero JS errors, and that the exact, specific failure
+  mode (provider not enabled) surfaces as a clear UI message rather than a
+  silent hang. Do a real manual pass (categorize a property, refresh, check
+  it persisted, try a second browser/device) once Anonymous Auth is enabled.
 
 ## GitHub workflow in this repo
 

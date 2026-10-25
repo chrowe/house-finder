@@ -50,6 +50,6 @@ This is a static site (`index.html` + `data.json` + `meta.json` + `version.json`
 
 `meta.json` holds a `lastUpdated` timestamp, written by `merge.py`/`merge_listings.py`/`merge_flood.py`/`estimate_value.py` each time they regenerate `data.json`, and shown in the app header.
 
-## Categorizing properties (sign-in required)
+## Categorizing properties
 
-Sign in with Google (top right) to mark a property Interested/Maybe/Rejected/Visited and leave notes, synced across your devices via Firebase — the one deliberate exception to this being a pure static site with no backend. See [AGENTS.md](AGENTS.md) for the Firestore layout, security rules, and a manual setup step (authorizing the live domain) needed for sign-in to work once deployed.
+Open any property's detail page to mark it Interested/Maybe/Rejected/Visited and leave notes, synced across your devices via Firebase — the one deliberate exception to this being a pure static site with no backend. No sign-in needed (this is a single-user tool, so the data is just one shared store). See [AGENTS.md](AGENTS.md) for the Firestore layout, security rules, and a manual setup step (enabling Anonymous Auth) needed before this works.
