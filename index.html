@@ -332,54 +332,20 @@ function clearAllFilters(){
 }
 $('reset').onclick=()=>{clearAllFilters();apply()};
 
-// Saved filters (#86): localStorage-only, per-browser convenience - not
-// synced across devices (that's what the Firestore categorization data is
-// for, a separate concern). Stores {name, qs} pairs; applying one clears
-// all filters first (restoreFromUrl() only sets params present in qs, it
-// doesn't clear ones that aren't, so without this a saved preset would
-// merge with whatever's currently set instead of replacing it).
-const SAVED_FILTERS_KEY='houseFinderSavedFilters';
-function loadSavedFilters(){
-  try{return JSON.parse(localStorage.getItem(SAVED_FILTERS_KEY)||'[]')}catch(e){return[]}
+// Saved filters (#86, moved to Firestore in #98): the UI lives here
+// (#saveFilterName/#saveFilterBtn/#savedFiltersList are plain markup in the
+// sidebar), but the actual storage is handled by the Firebase module script
+// below, same decoupling pattern as the categorize widget - this classic
+// script has no idea Firebase exists. window.applySavedFilterQs(qs) is the
+// one hook the module script calls back into, since applying a saved
+// preset needs this script's own filter-clearing/URL-restoring logic.
+function applySavedFilterQs(qs){
+  clearAllFilters();
+  history.pushState(null,'',qs||location.pathname);
+  restoreFromUrl();
+  apply();
 }
-function saveSavedFilters(list){
-  try{localStorage.setItem(SAVED_FILTERS_KEY,JSON.stringify(list))}catch(e){}
-}
-function renderSavedFilters(){
-  const list=loadSavedFilters();
-  $('savedFiltersList').innerHTML=list.map((f,i)=>
-    `<div class="dfield"><span><a href="#" class="savedFilterApply" data-i="${i}" style="color:var(--fg);text-decoration:none">${esc(f.name)}</a></span><span><a href="#" class="savedFilterDelete" data-i="${i}" style="color:var(--mut);font-size:12px">remove</a></span></div>`
-  ).join('');
-}
-$('saveFilterBtn').onclick=()=>{
-  const name=$('saveFilterName').value.trim();
-  if(!name)return;
-  updateUrl();
-  const list=loadSavedFilters();
-  list.push({name,qs:location.search});
-  saveSavedFilters(list);
-  $('saveFilterName').value='';
-  renderSavedFilters();
-};
-$('savedFiltersList').addEventListener('click',e=>{
-  e.preventDefault();
-  const applyLink=e.target.closest('.savedFilterApply');
-  const delLink=e.target.closest('.savedFilterDelete');
-  if(applyLink){
-    const f=loadSavedFilters()[+applyLink.dataset.i];
-    if(!f)return;
-    clearAllFilters();
-    history.pushState(null,'',f.qs||location.pathname);
-    restoreFromUrl();
-    apply();
-  }else if(delLink){
-    const list=loadSavedFilters();
-    list.splice(+delLink.dataset.i,1);
-    saveSavedFilters(list);
-    renderSavedFilters();
-  }
-});
-renderSavedFilters();
+window.getCurrentFilterQs=()=>{updateUrl();return location.search};
 function drawMap(){
   layer.clearLayers();
   const cb=COLORBY[$('mapColorBy').value];
@@ -635,7 +601,7 @@ window.addEventListener('focus',checkForUpdate);
 // a fully shared, unauthenticated-identity store for low-stakes data.
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
 import {getAuth,signInAnonymously,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
-import {getFirestore,doc,getDoc,setDoc,serverTimestamp} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+import {getFirestore,doc,getDoc,setDoc,serverTimestamp,collection,addDoc,getDocs,deleteDoc} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 
 const firebaseConfig={
   apiKey:"AIzaSyDycolKDsXiX-3nAQe_nhErKO-o22AwVmY",
@@ -719,10 +685,61 @@ signInAnonymously(auth).catch(e=>{
     ?"Anonymous sign-in isn't enabled on this Firebase project yet (Authentication → Sign-in method → Anonymous)."
     :e.message;
   renderCategorizeWidget();
+  renderSavedFilters();
 });
+// Saved filters (#86, moved here from localStorage in #98): shares the
+// classic script's one hook, window.applySavedFilterQs/getCurrentFilterQs,
+// same decoupling pattern as the categorize widget. One flat shared
+// collection, same tradeoff as categorizations (see AGENTS.md) - anyone
+// with a session can read/write, accepted for this low-stakes data.
+const savedFiltersCol=collection(db,"savedFilters");
+let savedFiltersCache=[];
+
+async function renderSavedFilters(){
+  const el=document.getElementById("savedFiltersList");
+  if(!el)return;
+  if(!authReady){
+    el.innerHTML=authError?'':`<div style="color:var(--mut);font-size:12px">Connecting...</div>`;
+    return;
+  }
+  try{
+    const snap=await getDocs(savedFiltersCol);
+    savedFiltersCache=[];
+    snap.forEach(d=>savedFiltersCache.push({id:d.id,...d.data()}));
+    el.innerHTML=savedFiltersCache.map(f=>
+      `<div class="dfield"><span><a href="#" class="savedFilterApply" data-id="${f.id}" style="color:var(--fg);text-decoration:none">${esc(f.name)}</a></span><span><a href="#" class="savedFilterDelete" data-id="${f.id}" style="color:var(--mut);font-size:12px">remove</a></span></div>`
+    ).join('');
+  }catch(e){
+    el.innerHTML=`<div style="color:#c0392b;font-size:12px">Couldn't load saved filters: ${esc(e.message)}</div>`;
+  }
+}
+
+document.getElementById("saveFilterBtn").addEventListener("click",async()=>{
+  const nameInput=document.getElementById("saveFilterName");
+  const name=nameInput.value.trim();
+  if(!name||!authReady)return;
+  const qs=window.getCurrentFilterQs();
+  await addDoc(savedFiltersCol,{name,qs,createdAt:serverTimestamp()}).catch(e=>console.error("Save filter failed:",e));
+  nameInput.value="";
+  renderSavedFilters();
+});
+document.getElementById("savedFiltersList").addEventListener("click",async e=>{
+  e.preventDefault();
+  const applyLink=e.target.closest(".savedFilterApply");
+  const delLink=e.target.closest(".savedFilterDelete");
+  if(applyLink){
+    const f=savedFiltersCache.find(x=>x.id===applyLink.dataset.id);
+    if(f)window.applySavedFilterQs(f.qs);
+  }else if(delLink){
+    await deleteDoc(doc(db,"savedFilters",delLink.dataset.id)).catch(e=>console.error("Delete filter failed:",e));
+    renderSavedFilters();
+  }
+});
+
 onAuthStateChanged(auth,user=>{
   authReady=!!user;
   renderCategorizeWidget();
+  renderSavedFilters();
 });
 </script>
 </body>

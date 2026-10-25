@@ -151,7 +151,7 @@ estimate_value.py → data.json        (extrapolates ourEstValue from assessed v
       a pure static site; see AGENTS.md.
 - [x] Street View link on the property page (#75) — zero-setup, no API key
 - [x] Sq Ft / $/Sqft columns (#84) — partial coverage, same backfill as #33
-- [x] Saved filters (#86) — localStorage, per-browser (not synced across
-      devices like the Firestore categorization data is)
+- [x] Saved filters (#86, #98) — moved from localStorage to Firestore, now
+      syncs across devices like the categorization data does
 - [ ] Embed Street View as an inline image (#74) — needs a Google Maps
       Platform API key (free, no billing account required)
