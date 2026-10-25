@@ -9,6 +9,10 @@ tells you which build you're on and which is latest, so you can read down
 from the top and stop once you reach your own build number — everything
 above it is new since you last refreshed.
 
+## Build 37 — 2026-10-25 19:19 ET
+
+Added Zillow and Redfin search links to the property page. Zillow links directly (no API key); Redfin falls back to a Google site-search since no reliable direct address-search URL was found for it.
+
 ## Build 36 — 2026-10-25 18:53 ET
 
 Moved saved filters from browser-only storage to the shared database — they now sync across your devices like property categorization already does. (Needs one more Firestore rules update — see AGENTS.md.)
