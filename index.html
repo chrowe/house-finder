@@ -184,12 +184,15 @@ $('tt').onclick=()=>{$('tablewrap').style.display='';$('map').style.display='non
 // Notify if a newer index.html has been deployed since this page loaded.
 let pageHTML=null;
 fetch('index.html',{cache:'no-store'}).then(r=>r.text()).then(t=>pageHTML=t).catch(()=>{});
-setInterval(()=>{
+function checkForUpdate(){
   if(!pageHTML)return;
   fetch('index.html',{cache:'no-store'}).then(r=>r.text()).then(t=>{
     if(t!==pageHTML)$('updateBanner').style.display='block';
   }).catch(()=>{});
-},5*60*1000);
+}
+setInterval(checkForUpdate,60*1000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkForUpdate()});
+window.addEventListener('focus',checkForUpdate);
 </script>
 </body>
 </html>
