@@ -90,6 +90,10 @@ tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
   <label>Distance to downtown (mi)</label>
   <input id="dist" type="number" step="any" placeholder="within...">
   <button id="reset">Reset filters</button>
+  <div style="margin-top:10px">
+    <div class="row"><input id="saveFilterName" type="text" placeholder="Name this filter set"><button id="saveFilterBtn">Save</button></div>
+    <div id="savedFiltersList" style="margin-top:6px"></div>
+  </div>
   <p style="color:var(--mut);font-size:12px">Source: Vermont statewide parcel/Grand List data (VCGI) joined with Montpelier assessor record cards (Patriot Properties) and Realtor.com listing data. Listing status/market value cover properties matched to a Realtor.com record from the last 10 years &mdash; most properties won't have one. For those, the <em>Est. Value</em> shown is a rough extrapolation instead (assessed value &times; the typical ratio of real Realtor.com estimates to assessed value in town, shown in italics) &mdash; not a real market estimate.</p>
 </aside>
 <section>
@@ -313,13 +317,62 @@ function render(){
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 $('more').onclick=()=>{shown+=200;render()};
 ['q','vmin','vmax','amin','amax','hs','imp','beds','baths','ybmin','ybmax','spmin','spmax','dist','evmin','evmax'].forEach(id=>$(id).addEventListener('input',apply));
-$('reset').onclick=()=>{
+function clearAllFilters(){
   document.querySelectorAll('aside input:not([type=checkbox]),aside select').forEach(e=>e.value='');
   Object.values(HF).forEach(h=>h.selected.clear());
   openHF=null;
   renderHead();
-  apply();
+}
+$('reset').onclick=()=>{clearAllFilters();apply()};
+
+// Saved filters (#86): localStorage-only, per-browser convenience - not
+// synced across devices (that's what the Firestore categorization data is
+// for, a separate concern). Stores {name, qs} pairs; applying one clears
+// all filters first (restoreFromUrl() only sets params present in qs, it
+// doesn't clear ones that aren't, so without this a saved preset would
+// merge with whatever's currently set instead of replacing it).
+const SAVED_FILTERS_KEY='houseFinderSavedFilters';
+function loadSavedFilters(){
+  try{return JSON.parse(localStorage.getItem(SAVED_FILTERS_KEY)||'[]')}catch(e){return[]}
+}
+function saveSavedFilters(list){
+  try{localStorage.setItem(SAVED_FILTERS_KEY,JSON.stringify(list))}catch(e){}
+}
+function renderSavedFilters(){
+  const list=loadSavedFilters();
+  $('savedFiltersList').innerHTML=list.map((f,i)=>
+    `<div class="dfield"><span><a href="#" class="savedFilterApply" data-i="${i}" style="color:var(--fg);text-decoration:none">${esc(f.name)}</a></span><span><a href="#" class="savedFilterDelete" data-i="${i}" style="color:var(--mut);font-size:12px">remove</a></span></div>`
+  ).join('');
+}
+$('saveFilterBtn').onclick=()=>{
+  const name=$('saveFilterName').value.trim();
+  if(!name)return;
+  updateUrl();
+  const list=loadSavedFilters();
+  list.push({name,qs:location.search});
+  saveSavedFilters(list);
+  $('saveFilterName').value='';
+  renderSavedFilters();
 };
+$('savedFiltersList').addEventListener('click',e=>{
+  e.preventDefault();
+  const applyLink=e.target.closest('.savedFilterApply');
+  const delLink=e.target.closest('.savedFilterDelete');
+  if(applyLink){
+    const f=loadSavedFilters()[+applyLink.dataset.i];
+    if(!f)return;
+    clearAllFilters();
+    history.pushState(null,'',f.qs||location.pathname);
+    restoreFromUrl();
+    apply();
+  }else if(delLink){
+    const list=loadSavedFilters();
+    list.splice(+delLink.dataset.i,1);
+    saveSavedFilters(list);
+    renderSavedFilters();
+  }
+});
+renderSavedFilters();
 function drawMap(){
   layer.clearLayers();
   const cb=COLORBY[$('mapColorBy').value];
