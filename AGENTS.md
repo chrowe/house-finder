@@ -210,6 +210,17 @@ need.
 
 ## GitHub workflow in this repo
 
+- **Every new request gets its own issue, branch, and PR — no exceptions,
+  including small stuff.** Workflow: open a GitHub issue describing the
+  request *before* writing any code → `git checkout -b <branch>` off latest
+  `main` (this must be the literal next action, before touching any tracked
+  file) → implement → commit (reference "Closes #N") → push → open a PR →
+  merge. Never implement first and file the issue after. Never commit
+  directly to `main`, even for a one-line fix — this has actually happened
+  twice in this project's history (direct commits landed on `main` with no
+  PR at all) purely from momentum right after a previous merge, so treat
+  "I just merged/checked out main" as a hard stop requiring a fresh branch
+  before anything else, not a reminder to branch "soon."
 - CHANGELOG.md is organized **by deploy** (one `## Build N` heading per PR),
   not by date — see [#59](https://github.com/chrowe/house-finder/issues/59).
   For any user-facing change (new filter, new column, new behavior — not
