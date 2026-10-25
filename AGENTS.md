@@ -147,11 +147,19 @@ rerun `python3 enrich.py` and it picks up where it left off. See [#3](https://gi
 
 ## GitHub workflow in this repo
 
-- Add a one-line entry to [CHANGELOG.md](CHANGELOG.md) for any user-facing
-  change before merging (new filter, new column, new behavior — not internal
-  refactors or doc-only changes). The "new version available" banner links to
-  it, so a stale changelog undermines that feature silently — nothing will
-  break, it'll just quietly stop being useful. See [#53](https://github.com/chrowe/house-finder/issues/53).
+- CHANGELOG.md is organized **by deploy** (one `## Build N` heading per PR),
+  not by date — see [#59](https://github.com/chrowe/house-finder/issues/59).
+  For any user-facing change (new filter, new column, new behavior — not
+  internal refactors or doc-only changes), in the same commit:
+  1. Bump `version.json`'s `build` by exactly 1.
+  2. Add a new `## Build <that number> — <date>` section at the top of
+     CHANGELOG.md with a one-line description.
+  The update banner polls `version.json` and tells the visitor which build
+  they're on vs. the latest — skipping either step breaks that silently (no
+  error, it just quietly stops being accurate). If two PRs are in flight at
+  once and both grab the same next build number, whoever merges second will
+  hit a conflict on `version.json` — resolve it by taking the next number
+  after whatever actually landed first, not by picking one side blindly.
 - `delete_branch_on_merge` is enabled. If you stack PRs (branch B based on
   branch A based on `main`), merge from the bottom up and let GitHub delete each
   branch as you go — that's what makes the next PR in the stack auto-retarget to
