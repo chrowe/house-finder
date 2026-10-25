@@ -40,6 +40,7 @@ listings.py       → listings.json    (Realtor.com listings, via HomeHarvest)
 merge_listings.py → data.json        (joins listings.json onto data.json by address)
 flood.py          → flood_zones.json (FEMA NFHL flood hazard zone polygons)
 merge_flood.py    → data.json        (point-in-polygon: each parcel's centroid vs. flood_zones.json)
+estimate_value.py → data.json        (extrapolates ourEstValue from assessed value, for parcels with no real mktEstValue)
 ```
 
 ## Data sources
@@ -72,6 +73,18 @@ merge_flood.py    → data.json        (point-in-polygon: each parcel's centroid
    intersecting full parcel geometry — a parcel spanning a zone boundary is
    classified by wherever its centroid happens to fall, not "any overlap."
 
+5. **Our own value estimate** (`estimate_value.py`) — not a data source, a
+   derived field. Only ~1,000 parcels have a real Realtor.com estimate
+   (`mktEstValue`); every parcel has an assessed value (`REAL_FLV`, Grand
+   List). For the ~2,000 parcels without a real estimate, `ourEstValue` =
+   assessed value × the median ratio of real estimate to assessed value,
+   computed from the parcels that have both (split by property type where
+   there's a trustworthy sample size — at least 20 parcels — town-wide median
+   otherwise). It's a rough extrapolation, not a market estimate, and is kept
+   in its own field and clearly labeled in the UI so it's never confused with
+   a real Realtor.com number. See [Known limitations](#known-limitations)
+   and #31.
+
 ## Known limitations
 
 - **"For sale" status and market value are partial, not authoritative.** They
@@ -100,6 +113,11 @@ merge_flood.py    → data.json        (point-in-polygon: each parcel's centroid
 - **Flood risk is based on each parcel's centroid, not its full footprint.** A
   large parcel straddling a flood zone boundary is classified by wherever its
   single lat/lng point falls, which can misclassify edge cases either way. See #6.
+- **`ourEstValue` is a rough extrapolation, not a real market estimate.** It's
+  just assessed value × a town-wide (or property-type) ratio derived from the
+  ~1,000 parcels that do have a real Realtor.com estimate — it doesn't know
+  anything about the specific property beyond its assessment and type. Treat
+  it as a ballpark, not something to make a purchase decision on. See #31.
 
 ## Roadmap
 
@@ -116,3 +134,5 @@ merge_flood.py    → data.json        (point-in-polygon: each parcel's centroid
       `merge_flood.py` run monthly via GitHub Actions and open a PR; `enrich.py`
       and `listings.py` are intentionally left manual-only (rate-limit/ToS risk
       from a shared CI runner IP — see AGENTS.md)
+- [x] Our own value estimate for parcels with no real Realtor.com estimate
+      (#31) — extrapolated from assessed value, clearly labeled as such

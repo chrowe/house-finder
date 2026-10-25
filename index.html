@@ -54,8 +54,10 @@ tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
   <select id="mstatus" title="Based on Realtor.com listing history (via HomeHarvest), not a live MLS feed"><option value="">Any</option><option value="FOR_SALE">For sale</option><option value="CONTINGENT">Contingent</option><option value="PENDING">Pending</option><option value="OFF_MARKET">Off market</option><option value="SOLD">Sold</option><option value="FOR_RENT">For rent</option><option value="NONE">Not listed (no Realtor.com record)</option></select>
   <label>Assessed value ($)</label>
   <div class="row"><input id="vmin" type="number" placeholder="min"><input id="vmax" type="number" placeholder="max"></div>
-  <label>Est. market value ($)</label>
+  <label>Realtor.com est. value ($)</label>
   <div class="row"><input id="mvmin" type="number" placeholder="min"><input id="mvmax" type="number" placeholder="max"></div>
+  <label>Our estimate ($)</label>
+  <div class="row"><input id="oevmin" type="number" placeholder="min" title="Our own rough estimate: assessed value × the town-wide (or property-type) ratio of Realtor.com estimates to assessed value. Not a real market estimate — only set when there's no real one."><input id="oevmax" type="number" placeholder="max" title="Our own rough estimate: assessed value × the town-wide (or property-type) ratio of Realtor.com estimates to assessed value. Not a real market estimate — only set when there's no real one."></div>
   <label>Acres</label>
   <div class="row"><input id="amin" type="number" step="any" placeholder="min"><input id="amax" type="number" step="any" placeholder="max"></div>
   <label>Homestead</label>
@@ -75,7 +77,7 @@ tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
   <label>Flood risk</label>
   <select id="flood" title="FEMA National Flood Hazard Layer, intersected with each parcel's centroid"><option value="">Any</option><option value="minimal">Minimal / not mapped</option><option value="moderate">Moderate (0.2% annual chance)</option><option value="high">High (1% annual chance / SFHA)</option><option value="floodway">Floodway (highest risk)</option></select>
   <button id="reset">Reset filters</button>
-  <p style="color:var(--mut);font-size:12px">Source: Vermont statewide parcel/Grand List data (VCGI) joined with Montpelier assessor record cards (Patriot Properties) and Realtor.com listing data. Listing status/market value cover properties matched to a Realtor.com record from the last 10 years &mdash; most properties won't have one.</p>
+  <p style="color:var(--mut);font-size:12px">Source: Vermont statewide parcel/Grand List data (VCGI) joined with Montpelier assessor record cards (Patriot Properties) and Realtor.com listing data. Listing status/market value cover properties matched to a Realtor.com record from the last 10 years &mdash; most properties won't have one. For those, <em>Our estimate</em> is a rough extrapolation (assessed value &times; the typical ratio of real Realtor.com estimates to assessed value in town) &mdash; not a real market estimate.</p>
 </aside>
 <section>
   <div class="tabs"><button id="tt" class="on">Table</button><button id="tm">Map</button></div>
@@ -99,7 +101,7 @@ tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
 const CATS={R1:'Residential (<6 ac)',R2:'Residential (6+ ac)',C:'Commercial',CA:'Commercial apartments',O:'Other / condo',M:'Mobile home (landed)',MHL:'Mobile home (leased land)',I:'Industrial',UE:'Utility – electric',S1:'Seasonal'};
 const DOWNTOWN=[44.2601,-72.5754]; // Vermont State House, Montpelier
 const MSTATUS={FOR_SALE:'For sale',CONTINGENT:'Contingent',PENDING:'Pending',OFF_MARKET:'Off market',SOLD:'Sold',FOR_RENT:'For rent'};
-const COLS=[['address','Address'],['owner','Owner'],['cat','Type'],['mktStatus','Listing'],['value','Assessed $',1],['mktEstValue','Est. Value $',1],['beds','Beds',1],['baths','Baths',1],['yearBuilt','Year',1],['lastSalePrice','Last Sale $',1],['lastSaleDate','Sale Date'],['acres','Acres',1],['dist','Dist (mi)',1],['floodRisk','Flood Risk'],['span','SPAN']];
+const COLS=[['address','Address'],['owner','Owner'],['cat','Type'],['mktStatus','Listing'],['value','Assessed $',1],['mktEstValue','Realtor.com Est. $',1],['ourEstValue','Our Est. $',1],['beds','Beds',1],['baths','Baths',1],['yearBuilt','Year',1],['lastSalePrice','Last Sale $',1],['lastSaleDate','Sale Date'],['acres','Acres',1],['dist','Dist (mi)',1],['floodRisk','Flood Risk'],['span','SPAN']];
 const FLOOD={minimal:'Minimal',moderate:'Moderate',high:'High',floodway:'Floodway'};
 // Map point coloring: categorical fields with >3 real values (property type,
 // listing status) are capped at the top categories + "Other" rather than
@@ -135,7 +137,7 @@ function haversineMi([lat1,lng1],lat2,lng2){
   const a=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
-const FIELD_IDS=['q','vmin','vmax','amin','amax','hs','imp','beds','baths','ybmin','ybmax','spmin','spmax','dist','mstatus','mvmin','mvmax','flood'];
+const FIELD_IDS=['q','vmin','vmax','amin','amax','hs','imp','beds','baths','ybmin','ybmax','spmin','spmax','dist','mstatus','mvmin','mvmax','oevmin','oevmax','flood'];
 function restoreFromUrl(){
   const p=new URLSearchParams(location.search);
   FIELD_IDS.forEach(id=>{if(p.has(id))$(id).value=p.get(id)});
@@ -161,6 +163,7 @@ fetch('data.json').then(r=>r.json()).then(rows=>{
     beds:r.beds??null,baths:r.baths??null,yearBuilt:r.yearBuilt??null,lastSalePrice:r.lastSalePrice??null,lastSaleDate:r.lastSaleDate||'',
     dist:haversineMi(DOWNTOWN,r.lat,r.lng),
     mktStatus:r.mktStatus||'',mktEstValue:r.mktEstValue??null,mktListPrice:r.mktListPrice??null,mktUrl:r.mktUrl||'',
+    ourEstValue:r.ourEstValue??null,
     floodRisk:r.floodRisk||'minimal'}));
   data.forEach(d=>d.hay=(d.address+' '+d.owner+' '+d.span+' '+d.desc).toLowerCase());
   const cs=[...new Set(data.map(d=>d.cat))].sort();
@@ -178,7 +181,7 @@ function apply(){
   const q=$('q').value.toLowerCase().trim(),hs=$('hs').value,imp=$('imp').value,mstatus=$('mstatus').value,flood=$('flood').value;
   const cats=[...document.querySelectorAll('.catChk:checked')].map(e=>e.value);
   const n=id=>$(id).value===''?null:+$(id).value;
-  const vmin=n('vmin'),vmax=n('vmax'),amin=n('amin'),amax=n('amax'),mvmin=n('mvmin'),mvmax=n('mvmax');
+  const vmin=n('vmin'),vmax=n('vmax'),amin=n('amin'),amax=n('amax'),mvmin=n('mvmin'),mvmax=n('mvmax'),oevmin=n('oevmin'),oevmax=n('oevmax');
   const bedsMin=n('beds'),bathsMin=n('baths'),ybmin=n('ybmin'),ybmax=n('ybmax'),spmin=n('spmin'),spmax=n('spmax'),distMax=n('dist');
   view=data.filter(d=>(!q||d.hay.includes(q))&&(cats.length===0||cats.includes(d.cat))&&(vmin==null||d.value>=vmin)&&(vmax==null||d.value<=vmax)
     &&(amin==null||d.acres>=amin)&&(amax==null||d.acres<=amax)&&(!hs||(hs=='y')==(d.hs>0))&&(!imp||(imp=='y')==(d.imp>0))
@@ -188,6 +191,7 @@ function apply(){
     &&(distMax==null||(d.dist!=null&&d.dist<=distMax))
     &&(!mstatus||(mstatus==='NONE'?!d.mktStatus:d.mktStatus===mstatus))
     &&(mvmin==null||d.mktEstValue>=mvmin)&&(mvmax==null||d.mktEstValue<=mvmax)
+    &&(oevmin==null||d.ourEstValue>=oevmin)&&(oevmax==null||d.ourEstValue<=oevmax)
     &&(!flood||d.floodRisk===flood));
   const {k,d}=sort;
   view.sort((a,b)=>{
@@ -200,7 +204,7 @@ function apply(){
 }
 function render(){
   $('count').textContent=`${view.length.toLocaleString()} of ${data.length.toLocaleString()} properties`;
-  $('body').innerHTML=view.slice(0,shown).map(d=>`<tr><td>${esc(d.address)}</td><td>${esc(d.owner)}</td><td>${CATS[d.cat]||d.cat}</td><td>${d.mktUrl?`<a href="${esc(d.mktUrl)}" target="_blank" rel="noopener">${esc(MSTATUS[d.mktStatus]||d.mktStatus)}</a>`:d.mktStatus?esc(MSTATUS[d.mktStatus]||d.mktStatus):`<span style="color:var(--mut)">Not listed</span>`}</td><td class="n">${fmt(d.value)}</td><td class="n">${fmt(d.mktEstValue)}</td><td class="n">${d.beds??''}</td><td class="n">${d.baths??''}</td><td class="n">${d.yearBuilt??''}</td><td class="n">${fmt(d.lastSalePrice)}</td><td>${esc(d.lastSaleDate)}</td><td class="n">${d.acres.toFixed(2)}</td><td class="n">${d.dist!=null?d.dist.toFixed(1):''}</td><td>${d.floodRisk==='minimal'?'':`<span style="color:${d.floodRisk==='floodway'?'#c0392b':d.floodRisk==='high'?'#e67e22':'var(--mut)'}">${FLOOD[d.floodRisk]}</span>`}</td><td>${esc(d.span)}</td></tr>`).join('');
+  $('body').innerHTML=view.slice(0,shown).map(d=>`<tr><td>${esc(d.address)}</td><td>${esc(d.owner)}</td><td>${CATS[d.cat]||d.cat}</td><td>${d.mktUrl?`<a href="${esc(d.mktUrl)}" target="_blank" rel="noopener">${esc(MSTATUS[d.mktStatus]||d.mktStatus)}</a>`:d.mktStatus?esc(MSTATUS[d.mktStatus]||d.mktStatus):`<span style="color:var(--mut)">Not listed</span>`}</td><td class="n">${fmt(d.value)}</td><td class="n">${fmt(d.mktEstValue)}</td><td class="n">${d.ourEstValue!=null?`<span style="font-style:italic;color:var(--mut)" title="Rough estimate, not a real market estimate: assessed value × the typical ratio of real Realtor.com estimates to assessed value in town.">${fmt(d.ourEstValue)}</span>`:''}</td><td class="n">${d.beds??''}</td><td class="n">${d.baths??''}</td><td class="n">${d.yearBuilt??''}</td><td class="n">${fmt(d.lastSalePrice)}</td><td>${esc(d.lastSaleDate)}</td><td class="n">${d.acres.toFixed(2)}</td><td class="n">${d.dist!=null?d.dist.toFixed(1):''}</td><td>${d.floodRisk==='minimal'?'':`<span style="color:${d.floodRisk==='floodway'?'#c0392b':d.floodRisk==='high'?'#e67e22':'var(--mut)'}">${FLOOD[d.floodRisk]}</span>`}</td><td>${esc(d.span)}</td></tr>`).join('');
   $('more').style.display=view.length>shown?'block':'none';
   if(map&&$('map').style.display=='block')drawMap();
   syncHscroll();
@@ -212,7 +216,7 @@ function syncHscroll(){
 }
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 $('more').onclick=()=>{shown+=200;render()};
-['q','vmin','vmax','amin','amax','hs','imp','beds','baths','ybmin','ybmax','spmin','spmax','dist','mvmin','mvmax','flood'].forEach(id=>$(id).addEventListener('input',apply));
+['q','vmin','vmax','amin','amax','hs','imp','beds','baths','ybmin','ybmax','spmin','spmax','dist','mvmin','mvmax','oevmin','oevmax','flood'].forEach(id=>$(id).addEventListener('input',apply));
 $('mstatus').addEventListener('change',apply);
 $('reset').onclick=()=>{
   document.querySelectorAll('aside input:not([type=checkbox]),aside select').forEach(e=>e.value='');
@@ -225,7 +229,7 @@ function drawMap(){
   view.filter(d=>d.lat).forEach(d=>{
     const color=cb?cb.get(d)[1]:'#1f6f4a';
     L.circleMarker([d.lat,d.lng],{radius:4,weight:1,color,fillOpacity:.6})
-      .bindPopup(`<b>${esc(d.address)}</b>${d.mktStatus?` <span style="color:var(--acc)">· ${esc(MSTATUS[d.mktStatus]||d.mktStatus)}</span>`:''}<br>${esc(d.owner)}<br>${CATS[d.cat]||d.cat} · ${fmt(d.value)} · ${d.acres.toFixed(2)} ac${d.beds?` · ${d.beds}bd/${d.baths??'?'}ba`:''}${d.yearBuilt?` · built ${d.yearBuilt}`:''}${d.mktEstValue?` · est. ${fmt(d.mktEstValue)}`:''}${d.mktUrl?` · <a href="${esc(d.mktUrl)}" target="_blank" rel="noopener">listing</a>`:''}${d.floodRisk!=='minimal'?` · <span style="color:#c0392b">${FLOOD[d.floodRisk]} flood risk</span>`:''}`).addTo(layer);
+      .bindPopup(`<b>${esc(d.address)}</b>${d.mktStatus?` <span style="color:var(--acc)">· ${esc(MSTATUS[d.mktStatus]||d.mktStatus)}</span>`:''}<br>${esc(d.owner)}<br>${CATS[d.cat]||d.cat} · ${fmt(d.value)} · ${d.acres.toFixed(2)} ac${d.beds?` · ${d.beds}bd/${d.baths??'?'}ba`:''}${d.yearBuilt?` · built ${d.yearBuilt}`:''}${d.mktEstValue?` · est. ${fmt(d.mktEstValue)}`:d.ourEstValue?` · <i title="Rough estimate, not a real market estimate">our est. ${fmt(d.ourEstValue)}</i>`:''}${d.mktUrl?` · <a href="${esc(d.mktUrl)}" target="_blank" rel="noopener">listing</a>`:''}${d.floodRisk!=='minimal'?` · <span style="color:#c0392b">${FLOOD[d.floodRisk]} flood risk</span>`:''}`).addTo(layer);
   });
   renderMapLegend();
 }
