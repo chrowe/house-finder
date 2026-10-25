@@ -186,6 +186,12 @@ $('tm').onclick=()=>{
 $('tt').onclick=()=>{$('tablewrap').style.display='';$('map').style.display='none';$('tt').classList.add('on');$('tm').classList.remove('on')};
 
 // Notify if a newer index.html has been deployed since this page loaded.
+// GitHub Pages serves index.html through a CDN (Fastly) with cache-control:
+// max-age=600 — confirmed it ignores both a cache-busting query string and a
+// client Cache-Control: no-cache header, so there's no way to force a bypass
+// from here. Worst case this detects a deploy up to ~10 minutes late; that's
+// a hard ceiling, not something {cache:'no-store'} (browser-cache-only) or
+// this code can improve on.
 let pageHTML=null;
 fetch('index.html',{cache:'no-store'}).then(r=>r.text()).then(t=>pageHTML=t).catch(()=>{});
 function checkForUpdate(){
