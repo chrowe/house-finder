@@ -9,6 +9,10 @@ tells you which build you're on and which is latest, so you can read down
 from the top and stop once you reach your own build number — everything
 above it is new since you last refreshed.
 
+## Build 24 — 2026-10-25 17:27 ET
+
+Added a per-property detail page — click any address (in the table or on the map) to see every field we have for that property in one place, plus a small map. Shareable as a link, and comes back with the browser's back button.
+
 ## Build 23 — 2026-10-25 15:09 ET
 
 Split sorting and filtering in the column headers: click the small ↕ icon to sort, click the header text itself to open the filter (on the 3 filterable columns). Previously clicking almost anywhere on a header sorted it, which could be confused with opening the filter.
