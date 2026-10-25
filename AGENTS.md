@@ -31,9 +31,11 @@ reason; the whole point is that this deploys to GitHub Pages as static files.
 
 `enrich.py` scrapes Montpelier's assessor record cards (Patriot Properties), which:
 
-- has no bulk API — one record per page view, two requests per record (a
-  `Summary.asp?AccountNumber=N` call to set session state, then
-  `summary-bottom.asp` to actually fetch it),
+- has no bulk API — one record per page view, three requests per record (a
+  `Summary.asp?AccountNumber=N` call to set session state, `summary-bottom.asp`
+  for most fields, and `RecordCard.asp` — a separate page, only reachable via
+  the `summary-middle.asp` nav frame — for square footage, see
+  [#33](https://github.com/chrowe/house-finder/issues/33)),
 - has no way to list all accounts directly — `enrich.py` does one search per
   street-initial letter/digit (with pagination) to discover valid account IDs,
 - **rate-limits aggressively.** It IP-blocked us (HTTP 403) twice during initial
