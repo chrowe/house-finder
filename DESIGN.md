@@ -142,6 +142,8 @@ estimate_value.py → data.json        (extrapolates ourEstValue from assessed v
 - [x] Per-property detail page (#25) — a `?span=<SPAN>` link on the same
       index.html (no server-side routing needed), pushState-routed so it
       doesn't re-fetch data.json on every visit
-- [ ] Select a property and find similar ones (#71)
+- [x] Select a property and find similar ones (#71) — normalized-distance
+      ranking (type, beds/baths/acres/value/year built, physical proximity),
+      not a learned model
 - [ ] Database backend so categorization syncs across devices (#46) — Firebase
       project is set up (#52); wiring it into the app is in progress

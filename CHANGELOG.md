@@ -9,6 +9,10 @@ tells you which build you're on and which is latest, so you can read down
 from the top and stop once you reach your own build number — everything
 above it is new since you last refreshed.
 
+## Build 25 — 2026-10-25 17:31 ET
+
+Added a "Find similar properties" button on the detail page — ranks other properties by type, beds/baths/acres/value/year built, and physical proximity (a simple normalized-distance comparison, not a learned model).
+
 ## Build 24 — 2026-10-25 17:27 ET
 
 Added a per-property detail page — click any address (in the table or on the map) to see every field we have for that property in one place, plus a small map. Shareable as a link, and comes back with the browser's back button.
