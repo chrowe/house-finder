@@ -39,4 +39,6 @@ Then open http://localhost:8000/
 
 ## Deploying to GitHub Pages
 
-This is a static site (just `index.html` + `data.json`) — no build step. Push to GitHub, then in the repo's Settings → Pages, set the source to "Deploy from branch" / `main` / `root`.
+This is a static site (`index.html` + `data.json` + `meta.json`) — no build step. Push to GitHub, then in the repo's Settings → Pages, set the source to "Deploy from branch" / `main` / `root`.
+
+`meta.json` holds a `lastUpdated` timestamp, written by `merge.py`/`merge_listings.py` each time they regenerate `data.json`, and shown in the app header.

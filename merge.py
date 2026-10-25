@@ -3,6 +3,7 @@ record-card enrichment (accounts.jsonl, keyed by span) into one dataset for the 
 Overwrites data.json in place.
 """
 import json, re
+from datetime import datetime, timezone
 
 def to_int(s):
     if not s:
@@ -52,6 +53,7 @@ def main():
         p["landClass"] = (pr.get("land_class") or "").strip() or None
 
     json.dump(parcels, open("data.json", "w"), separators=(",", ":"))
+    json.dump({"lastUpdated": datetime.now(timezone.utc).isoformat()}, open("meta.json", "w"))
     print(f"matched {matched} of {len(parcels)} parcels with Patriot Properties records")
 
 if __name__ == "__main__":

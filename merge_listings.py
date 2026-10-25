@@ -3,6 +3,7 @@ normalized street address (there's no shared ID between the two sources).
 Overwrites data.json in place. Run after merge.py.
 """
 import json, re
+from datetime import datetime, timezone
 
 SUFFIX_MAP = {"TERR": "TER", "LANE": "LN", "WY": "WAY", "HILL": "HL"}
 KNOWN_SUFFIXES = {"ST", "RD", "DR", "AVE", "TER", "TERR", "LN", "LANE", "CIR", "WAY",
@@ -43,6 +44,7 @@ def main():
         p["mktSoldDate"] = r.get("last_sold_date")
 
     json.dump(parcels, open("data.json", "w"), separators=(",", ":"))
+    json.dump({"lastUpdated": datetime.now(timezone.utc).isoformat()}, open("meta.json", "w"))
     print(f"matched {matched} of {len(parcels)} parcels to a Realtor.com listing record")
 
 if __name__ == "__main__":
