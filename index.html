@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Montpelier Property Finder</title>
 <style>
-/* ---- Leaflet 1.9.4 core CSS (inlined so this page has no external stylesheet dependency) ---- */
+/* ---- Leaflet 1.9.4 core CSS (inlined) ---- */
 .leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0}.leaflet-container{overflow:hidden}.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow{-webkit-user-select:none;-moz-user-select:none;user-select:none;-webkit-user-drag:none}.leaflet-tile::selection{background:transparent}.leaflet-safari .leaflet-tile{image-rendering:-webkit-optimize-contrast}.leaflet-safari .leaflet-tile-container{width:1600px;height:1600px;-webkit-transform-origin:0 0}.leaflet-marker-icon,.leaflet-marker-shadow{display:block}.leaflet-container .leaflet-overlay-pane svg{max-width:none!important;max-height:none!important}.leaflet-container .leaflet-marker-pane img,.leaflet-container .leaflet-shadow-pane img,.leaflet-container .leaflet-tile-pane img,.leaflet-container img.leaflet-image-layer,.leaflet-container .leaflet-tile{max-width:none!important;max-height:none!important;width:auto;padding:0}.leaflet-container img.leaflet-tile{mix-blend-mode:plus-lighter}.leaflet-container.leaflet-touch-zoom{-ms-touch-action:pan-x pan-y;touch-action:pan-x pan-y}.leaflet-container.leaflet-touch-drag{-ms-touch-action:pinch-zoom;touch-action:none;touch-action:pinch-zoom}.leaflet-container.leaflet-touch-drag.leaflet-touch-zoom{-ms-touch-action:none;touch-action:none}.leaflet-container{-webkit-tap-highlight-color:transparent}.leaflet-container a{-webkit-tap-highlight-color:rgba(51,181,229,0.4)}.leaflet-tile{filter:inherit;visibility:hidden}.leaflet-tile-loaded{visibility:inherit}.leaflet-zoom-box{width:0;height:0;box-sizing:border-box;z-index:800}.leaflet-overlay-pane svg{-moz-user-select:none}.leaflet-pane{z-index:400}.leaflet-tile-pane{z-index:200}.leaflet-overlay-pane{z-index:400}.leaflet-shadow-pane{z-index:500}.leaflet-marker-pane{z-index:600}.leaflet-tooltip-pane{z-index:650}.leaflet-popup-pane{z-index:700}.leaflet-map-pane canvas{z-index:100}.leaflet-map-pane svg{z-index:200}.leaflet-vml-shape{width:1px;height:1px}.lvml{display:inline-block;position:absolute}.leaflet-control{position:relative;z-index:800;pointer-events:visiblePainted;pointer-events:auto}.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}.leaflet-top{top:0}.leaflet-right{right:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}.leaflet-control{float:left;clear:both}.leaflet-right .leaflet-control{float:right}.leaflet-top .leaflet-control{margin-top:10px}.leaflet-bottom .leaflet-control{margin-bottom:10px}.leaflet-left .leaflet-control{margin-left:10px}.leaflet-right .leaflet-control{margin-right:10px}.leaflet-fade-anim .leaflet-popup{opacity:0;transition:opacity 0.2s linear}.leaflet-fade-anim .leaflet-map-pane .leaflet-popup{opacity:1}.leaflet-zoom-animated{transform-origin:0 0}svg.leaflet-zoom-animated{will-change:transform}.leaflet-zoom-anim .leaflet-zoom-animated{transition:transform 0.25s cubic-bezier(0,0,0.25,1)}.leaflet-zoom-anim .leaflet-tile,.leaflet-pan-anim .leaflet-tile{transition:none}.leaflet-zoom-anim .leaflet-zoom-hide{visibility:hidden}.leaflet-interactive{cursor:pointer}.leaflet-grab{cursor:grab}.leaflet-crosshair,.leaflet-crosshair .leaflet-interactive{cursor:crosshair}.leaflet-popup-pane,.leaflet-control{cursor:auto}.leaflet-dragging .leaflet-grab,.leaflet-dragging .leaflet-grab .leaflet-interactive,.leaflet-dragging .leaflet-marker-draggable{cursor:grabbing}.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-image-layer,.leaflet-pane>svg path,.leaflet-tile-container{pointer-events:none}.leaflet-marker-icon.leaflet-interactive,.leaflet-image-layer.leaflet-interactive,.leaflet-pane>svg path.leaflet-interactive,svg.leaflet-image-layer.leaflet-interactive path{pointer-events:visiblePainted;pointer-events:auto}.leaflet-container{background:#ddd;outline-offset:1px}.leaflet-container a{color:#0078A8}.leaflet-zoom-box{border:2px dotted #38f;background:rgba(255,255,255,0.5)}.leaflet-container{font-family:"Helvetica Neue",Arial,Helvetica,sans-serif;font-size:0.75rem;line-height:1.5}.leaflet-bar{box-shadow:0 1px 5px rgba(0,0,0,0.65);border-radius:4px}.leaflet-bar a{background-color:#fff;border-bottom:1px solid #ccc;width:26px;height:26px;line-height:26px;display:block;text-align:center;text-decoration:none;color:#000}.leaflet-bar a,.leaflet-control-layers-toggle{background-position:50% 50%;background-repeat:no-repeat;display:block}.leaflet-bar a:hover,.leaflet-bar a:focus{background-color:#f4f4f4}.leaflet-bar a:first-child{border-top-left-radius:4px;border-top-right-radius:4px}.leaflet-bar a:last-child{border-bottom-left-radius:4px;border-bottom-right-radius:4px;border-bottom:none}.leaflet-bar a.leaflet-disabled{cursor:default;background-color:#f4f4f4;color:#bbb}.leaflet-touch .leaflet-bar a{width:30px;height:30px;line-height:30px}.leaflet-control-zoom-in,.leaflet-control-zoom-out{font:bold 18px 'Lucida Console',Monaco,monospace;text-indent:1px}.leaflet-control-attribution{background:rgba(255,255,255,0.8);margin:0;padding:0 5px;color:#333;line-height:1.4}.leaflet-control-attribution a{text-decoration:none}.leaflet-popup{position:absolute;text-align:center;margin-bottom:20px}.leaflet-popup-content-wrapper{padding:1px;text-align:left;border-radius:12px}.leaflet-popup-content{margin:13px 24px 13px 20px;line-height:1.3;font-size:1.08333em;min-height:1px}.leaflet-popup-tip-container{width:40px;height:20px;position:absolute;left:50%;margin-top:-1px;margin-left:-20px;overflow:hidden;pointer-events:none}.leaflet-popup-tip{width:17px;height:17px;padding:1px;margin:-10px auto 0;pointer-events:auto;transform:rotate(45deg)}.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#fff;color:#333;box-shadow:0 3px 14px rgba(0,0,0,0.4)}.leaflet-container a.leaflet-popup-close-button{position:absolute;top:0;right:0;border:none;text-align:center;width:24px;height:24px;font:16px/24px Tahoma,Verdana,sans-serif;color:#757575;text-decoration:none;background:transparent}.leaflet-popup-scrolled{overflow:auto}.leaflet-div-icon{background:#fff;border:1px solid #666}
 :root{--bg:#f6f7f9;--card:#fff;--fg:#1c2128;--mut:#667085;--line:#e3e6ea;--acc:#1f6f4a}
 @media(prefers-color-scheme:dark){:root{--bg:#14171a;--card:#1d2125;--fg:#e6e8ea;--mut:#9aa3ad;--line:#2d333a;--acc:#4cc38a}}
@@ -49,8 +49,19 @@ tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
   <select id="hs"><option value="">Any</option><option value="y">Has homestead value</option><option value="n">No homestead</option></select>
   <label>Has building</label>
   <select id="imp"><option value="">Any</option><option value="y">Improved (building value &gt; 0)</option><option value="n">Land only</option></select>
+  <label>Bedrooms</label>
+  <select id="beds"><option value="">Any</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option><option value="4">4+</option><option value="5">5+</option></select>
+  <label>Bathrooms</label>
+  <select id="baths"><option value="">Any</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option><option value="4">4+</option></select>
+  <label>Year built</label>
+  <div class="row"><input id="ybmin" type="number" placeholder="min"><input id="ybmax" type="number" placeholder="max"></div>
+  <label>Building style</label><select id="style"></select>
+  <label>Last sale price ($)</label>
+  <div class="row"><input id="spmin" type="number" placeholder="min"><input id="spmax" type="number" placeholder="max"></div>
+  <label>Distance to downtown (mi)</label>
+  <input id="dist" type="number" step="any" placeholder="within...">
   <button id="reset">Reset filters</button>
-  <p style="color:var(--mut);font-size:12px">Source: Vermont Center for Geographic Information statewide parcel data with Grand List values. Values are listed (assessed) values, not sale prices.</p>
+  <p style="color:var(--mut);font-size:12px">Source: Vermont statewide parcel/Grand List data (VCGI) joined with Montpelier assessor record cards (Patriot Properties). Values are assessed values, not current market listings &mdash; "for sale" status isn't tracked yet.</p>
 </aside>
 <section>
   <div class="tabs"><button id="tt" class="on">Table</button><button id="tm">Map</button></div>
@@ -61,45 +72,68 @@ tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
 <script>
 const CATS={R1:'Residential (<6 ac)',R2:'Residential (6+ ac)',C:'Commercial',CA:'Commercial apartments',O:'Other / condo',M:'Mobile home (landed)',MHL:'Mobile home (leased land)',I:'Industrial',UE:'Utility – electric',S1:'Seasonal'};
-const COLS=[['address','Address'],['owner','Owner'],['cat','Type'],['value','Assessed $',1],['land','Land $',1],['imp','Building $',1],['acres','Acres',1],['span','SPAN']];
+const DOWNTOWN=[44.2601,-72.5754]; // Vermont State House, Montpelier
+const COLS=[['address','Address'],['owner','Owner'],['cat','Type'],['value','Assessed $',1],['beds','Beds',1],['baths','Baths',1],['yearBuilt','Year',1],['style','Style'],['lastSalePrice','Last Sale $',1],['lastSaleDate','Sale Date'],['acres','Acres',1],['dist','Dist (mi)',1],['span','SPAN']];
 const $=id=>document.getElementById(id);
 const fmt=n=>n==null?'':'$'+n.toLocaleString();
 let data=[],view=[],sort={k:'address',d:1},shown=100,map,layer;
 const title=s=>(s||'').replace(/\s+/g,' ').trim();
+function haversineMi([lat1,lng1],lat2,lng2){
+  if(lat2==null||lng2==null)return null;
+  const R=3958.8,toRad=d=>d*Math.PI/180;
+  const dLat=toRad(lat2-lat1),dLng=toRad(lng2-lng1);
+  const a=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
 fetch('data.json').then(r=>r.json()).then(rows=>{
   data=rows.map(r=>({address:title(r.E911ADDR||r.LOCAPROP||r.DESCPROP),owner:title([r.OWNER1,r.OWNER2].filter(Boolean).join(' / ')),
-    cat:r.CAT||'',value:r.REAL_FLV||0,land:r.LAND_LV||0,imp:r.IMPRV_LV||0,hs:r.HSTED_FLV||0,acres:r.ACRESGL||0,span:r.SPAN,lat:r.lat,lng:r.lng,desc:title(r.DESCPROP)}));
+    cat:r.CAT||'',value:r.REAL_FLV||0,land:r.LAND_LV||0,imp:r.IMPRV_LV||0,hs:r.HSTED_FLV||0,acres:r.ACRESGL||0,span:r.SPAN,lat:r.lat,lng:r.lng,desc:title(r.DESCPROP),
+    beds:r.beds??null,baths:r.baths??null,yearBuilt:r.yearBuilt??null,style:r.style||'',lastSalePrice:r.lastSalePrice??null,lastSaleDate:r.lastSaleDate||'',
+    dist:haversineMi(DOWNTOWN,r.lat,r.lng)}));
   data.forEach(d=>d.hay=(d.address+' '+d.owner+' '+d.span+' '+d.desc).toLowerCase());
   const cs=[...new Set(data.map(d=>d.cat))].sort();
   $('cat').innerHTML='<option value="">All types</option>'+cs.map(c=>`<option value="${c}">${CATS[c]||c||'Unknown'}</option>`).join('');
+  const styles=[...new Set(data.map(d=>d.style).filter(Boolean))].sort();
+  $('style').innerHTML='<option value="">Any style</option>'+styles.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
   $('head').innerHTML=COLS.map(([k,l,n])=>`<th data-k="${k}" class="${n?'n':''}">${l}</th>`).join('');
   $('head').onclick=e=>{const k=e.target.dataset.k;if(!k)return;sort=sort.k==k?{k,d:-sort.d}:{k,d:1};apply()};
   apply();
 });
 function apply(){
-  const q=$('q').value.toLowerCase().trim(),cat=$('cat').value,hs=$('hs').value,imp=$('imp').value;
+  const q=$('q').value.toLowerCase().trim(),cat=$('cat').value,hs=$('hs').value,imp=$('imp').value,style=$('style').value;
   const n=id=>$(id).value===''?null:+$(id).value;
   const vmin=n('vmin'),vmax=n('vmax'),amin=n('amin'),amax=n('amax');
+  const bedsMin=n('beds'),bathsMin=n('baths'),ybmin=n('ybmin'),ybmax=n('ybmax'),spmin=n('spmin'),spmax=n('spmax'),distMax=n('dist');
   view=data.filter(d=>(!q||d.hay.includes(q))&&(!cat||d.cat===cat)&&(vmin==null||d.value>=vmin)&&(vmax==null||d.value<=vmax)
-    &&(amin==null||d.acres>=amin)&&(amax==null||d.acres<=amax)&&(!hs||(hs=='y')==(d.hs>0))&&(!imp||(imp=='y')==(d.imp>0)));
+    &&(amin==null||d.acres>=amin)&&(amax==null||d.acres<=amax)&&(!hs||(hs=='y')==(d.hs>0))&&(!imp||(imp=='y')==(d.imp>0))
+    &&(bedsMin==null||d.beds>=bedsMin)&&(bathsMin==null||d.baths>=bathsMin)
+    &&(ybmin==null||d.yearBuilt>=ybmin)&&(ybmax==null||d.yearBuilt<=ybmax)
+    &&(!style||d.style===style)
+    &&(spmin==null||d.lastSalePrice>=spmin)&&(spmax==null||d.lastSalePrice<=spmax)
+    &&(distMax==null||(d.dist!=null&&d.dist<=distMax)));
   const {k,d}=sort;
-  view.sort((a,b)=>(typeof a[k]=='number'?a[k]-b[k]:String(a[k]).localeCompare(String(b[k]),undefined,{numeric:true}))*d);
+  view.sort((a,b)=>{
+    const av=a[k],bv=b[k];
+    if(av==null&&bv==null)return 0;
+    if(av==null)return 1;if(bv==null)return -1;
+    return (typeof av=='number'?av-bv:String(av).localeCompare(String(bv),undefined,{numeric:true}))*d;
+  });
   shown=100;render();
 }
 function render(){
   $('count').textContent=`${view.length.toLocaleString()} of ${data.length.toLocaleString()} properties`;
-  $('body').innerHTML=view.slice(0,shown).map(d=>`<tr><td>${esc(d.address)}</td><td>${esc(d.owner)}</td><td>${CATS[d.cat]||d.cat}</td><td class="n">${fmt(d.value)}</td><td class="n">${fmt(d.land)}</td><td class="n">${fmt(d.imp)}</td><td class="n">${d.acres.toFixed(2)}</td><td>${esc(d.span)}</td></tr>`).join('');
+  $('body').innerHTML=view.slice(0,shown).map(d=>`<tr><td>${esc(d.address)}</td><td>${esc(d.owner)}</td><td>${CATS[d.cat]||d.cat}</td><td class="n">${fmt(d.value)}</td><td class="n">${d.beds??''}</td><td class="n">${d.baths??''}</td><td class="n">${d.yearBuilt??''}</td><td>${esc(d.style)}</td><td class="n">${fmt(d.lastSalePrice)}</td><td>${esc(d.lastSaleDate)}</td><td class="n">${d.acres.toFixed(2)}</td><td class="n">${d.dist!=null?d.dist.toFixed(1):''}</td><td>${esc(d.span)}</td></tr>`).join('');
   $('more').style.display=view.length>shown?'block':'none';
   if(map&&$('map').style.display=='block')drawMap();
 }
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 $('more').onclick=()=>{shown+=200;render()};
-['q','cat','vmin','vmax','amin','amax','hs','imp'].forEach(id=>$(id).addEventListener('input',apply));
+['q','cat','vmin','vmax','amin','amax','hs','imp','beds','baths','ybmin','ybmax','style','spmin','spmax','dist'].forEach(id=>$(id).addEventListener('input',apply));
 $('reset').onclick=()=>{document.querySelectorAll('aside input,aside select').forEach(e=>e.value='');apply()};
 function drawMap(){
   layer.clearLayers();
   view.filter(d=>d.lat).forEach(d=>L.circleMarker([d.lat,d.lng],{radius:4,weight:1,color:'#1f6f4a',fillOpacity:.6})
-    .bindPopup(`<b>${esc(d.address)}</b><br>${esc(d.owner)}<br>${CATS[d.cat]||d.cat} · ${fmt(d.value)} · ${d.acres.toFixed(2)} ac`).addTo(layer));
+    .bindPopup(`<b>${esc(d.address)}</b><br>${esc(d.owner)}<br>${CATS[d.cat]||d.cat} · ${fmt(d.value)} · ${d.acres.toFixed(2)} ac${d.beds?` · ${d.beds}bd/${d.baths??'?'}ba`:''}${d.yearBuilt?` · built ${d.yearBuilt}`:''}`).addTo(layer));
 }
 $('tm').onclick=()=>{
   $('tablewrap').style.display='none';$('map').style.display='block';$('tm').classList.add('on');$('tt').classList.remove('on');
