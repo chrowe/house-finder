@@ -46,7 +46,7 @@ tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
 </style>
 </head>
 <body>
-<div id="updateBanner">A new version of this app is available.<a href="https://github.com/chrowe/house-finder/blob/main/CHANGELOG.md" target="_blank" rel="noopener">What's new</a><button onclick="location.reload()">Refresh</button><button onclick="$('updateBanner').style.display='none'">Dismiss</button></div>
+<div id="updateBanner"><span>A new version of this app is available.</span><a href="https://github.com/chrowe/house-finder/blob/main/CHANGELOG.md" target="_blank" rel="noopener">What's new</a><button onclick="location.reload()">Refresh</button><button onclick="$('updateBanner').style.display='none'">Dismiss</button></div>
 <header><h1>Montpelier, VT — Property Finder</h1><span id="count"></span><span id="updated" style="font-size:12px;color:var(--mut)"></span><a href="https://github.com/chrowe/house-finder/blob/main/CHANGELOG.md" target="_blank" rel="noopener" style="margin-left:auto;font-size:12px;color:var(--mut)">Changelog</a><a href="https://github.com/chrowe/house-finder/issues/new" target="_blank" rel="noopener" style="font-size:12px;color:var(--mut)">Suggest a feature / report a bug</a></header>
 <main>
 <aside>
@@ -243,19 +243,26 @@ $('tm').onclick=()=>{
 $('tt').onclick=()=>{$('tablewrap').style.display='';$('map').style.display='none';$('mapControls').style.display='none';$('tt').classList.add('on');$('tm').classList.remove('on')};
 $('mapColorBy').onchange=drawMap;
 
-// Notify if a newer index.html has been deployed since this page loaded.
-// GitHub Pages serves index.html through a CDN (Fastly) with cache-control:
+// Notify if a newer build has been deployed since this page loaded, using
+// version.json's build number (bumped by 1 in every PR alongside a
+// CHANGELOG.md entry — see AGENTS.md) rather than diffing index.html's raw
+// bytes: smaller to poll, and gives an exact "you're on build X, Y is out"
+// message instead of just "something changed."
+// GitHub Pages serves everything through a CDN (Fastly) with cache-control:
 // max-age=600 — confirmed it ignores both a cache-busting query string and a
 // client Cache-Control: no-cache header, so there's no way to force a bypass
 // from here. Worst case this detects a deploy up to ~10 minutes late; that's
 // a hard ceiling, not something {cache:'no-store'} (browser-cache-only) or
 // this code can improve on.
-let pageHTML=null;
-fetch('index.html',{cache:'no-store'}).then(r=>r.text()).then(t=>pageHTML=t).catch(()=>{});
+let myBuild=null;
+fetch('version.json',{cache:'no-store'}).then(r=>r.json()).then(v=>myBuild=v.build).catch(()=>{});
 function checkForUpdate(){
-  if(!pageHTML)return;
-  fetch('index.html',{cache:'no-store'}).then(r=>r.text()).then(t=>{
-    if(t!==pageHTML)$('updateBanner').style.display='block';
+  if(myBuild==null)return;
+  fetch('version.json',{cache:'no-store'}).then(r=>r.json()).then(v=>{
+    if(v.build>myBuild){
+      $('updateBanner').querySelector('span').textContent=`A new version (build ${v.build}) is available — you're on build ${myBuild}.`;
+      $('updateBanner').style.display='block';
+    }
   }).catch(()=>{});
 }
 setInterval(checkForUpdate,60*1000);
