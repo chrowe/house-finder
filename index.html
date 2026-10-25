@@ -34,10 +34,15 @@ section{display:flex;flex-direction:column;min-width:0}
 #map{flex:1;margin:0 12px 12px;border:1px solid var(--line);border-radius:6px;display:none}
 table{border-collapse:collapse;width:100%}
 th,td{padding:6px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
-th{position:sticky;top:0;background:var(--card);cursor:pointer;user-select:none}
-.sort-arrow{color:var(--acc);font-size:10px}
-.hf-btn{display:inline-block;margin-left:4px;cursor:pointer;color:var(--mut);font-size:10px;user-select:none}
-.hf-btn:hover{color:var(--acc)}
+th{position:sticky;top:0;background:var(--card);user-select:none}
+.sort-btn{display:inline-block;margin-left:6px;cursor:pointer;color:var(--mut);font-size:11px;user-select:none}
+.sort-btn.active{color:var(--acc)}
+.sort-btn:hover{color:var(--acc)}
+.hf-label{cursor:pointer}
+.hf-label:hover{color:var(--acc)}
+.hf-label .hf-caret{margin-left:3px;font-size:10px;color:var(--mut)}
+.hf-label:hover .hf-caret{color:var(--acc)}
+.col-label{cursor:default}
 .hf-pop{position:absolute;top:100%;left:0;z-index:50;margin-top:2px;min-width:200px;max-height:260px;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.25);padding:6px 8px;font-weight:400;text-transform:none;letter-spacing:normal;white-space:nowrap}
 .hf-pop label{display:flex;align-items:center;gap:6px;padding:3px 2px;font-size:13px;color:var(--fg);cursor:pointer}
 .hf-pop label:hover{background:color-mix(in srgb,var(--acc) 10%,transparent)}
@@ -209,11 +214,10 @@ fetch('data.json').then(r=>r.json()).then(rows=>{
   buildHF();
   renderHead();
   $('head').onclick=e=>{
-    const btn=e.target.closest('.hf-btn');
-    if(btn){openHF=openHF===btn.dataset.hfk?null:btn.dataset.hfk;renderHead();return}
-    if(e.target.closest('.hf-pop'))return;
-    const k=e.target.closest('th')?.dataset.k;if(!k)return;
-    sort=sort.k==k?{k,d:-sort.d}:{k,d:1};renderHead();apply();
+    const sortBtn=e.target.closest('.sort-btn');
+    if(sortBtn){const k=sortBtn.dataset.sk;sort=sort.k==k?{k,d:-sort.d}:{k,d:1};renderHead();apply();return}
+    const lbl=e.target.closest('.hf-label');
+    if(lbl){openHF=openHF===lbl.dataset.hfk?null:lbl.dataset.hfk;renderHead();return}
   };
   $('head').onchange=e=>{
     const chk=e.target.closest('.hfChk');
@@ -223,16 +227,20 @@ fetch('data.json').then(r=>r.json()).then(rows=>{
     apply();
   };
   document.addEventListener('click',e=>{
-    if(openHF&&!e.target.closest('.hf-pop')&&!e.target.closest('.hf-btn')){openHF=null;renderHead()}
+    if(openHF&&!e.target.closest('.hf-pop')&&!e.target.closest('.hf-label')){openHF=null;renderHead()}
   });
   restoreFromUrl();
   apply();
 });
 function renderHead(){
   $('head').innerHTML=COLS.map(([k,l,n])=>{
-    const sortArrow=sort.k===k?`<span class="sort-arrow">${sort.d>0?' ▲':' ▼'}</span>`:'';
-    const hfUI=HF[k]?`<span class="hf-btn" data-hfk="${k}">▾</span><div class="hf-pop" data-hfk="${k}" style="display:${openHF===k?'block':'none'}">${hfPopoverHTML(k)}</div>`:'';
-    return `<th data-k="${k}" class="${n?'n':''}">${l}${sortArrow}${hfUI}</th>`;
+    const active=sort.k===k;
+    const sortBtn=`<span class="sort-btn${active?' active':''}" data-sk="${k}" title="Sort by ${esc(l)}">${active?(sort.d>0?'▲':'▼'):'↕'}</span>`;
+    const label=HF[k]
+      ?`<span class="hf-label" data-hfk="${k}" title="Filter by ${esc(l)}">${l}<span class="hf-caret">▾</span></span>`
+      :`<span class="col-label">${l}</span>`;
+    const hfPop=HF[k]?`<div class="hf-pop" data-hfk="${k}" style="display:${openHF===k?'block':'none'}">${hfPopoverHTML(k)}</div>`:'';
+    return `<th data-k="${k}" class="${n?'n':''}">${label}${sortBtn}${hfPop}</th>`;
   }).join('');
 }
 function apply(){
