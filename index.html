@@ -83,6 +83,10 @@ tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
   <select id="beds"><option value="">Any</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option><option value="4">4+</option><option value="5">5+</option></select>
   <label>Bathrooms</label>
   <select id="baths"><option value="">Any</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option><option value="4">4+</option></select>
+  <label>Square feet</label>
+  <div class="row"><input id="sqmin" type="number" placeholder="min"><input id="sqmax" type="number" placeholder="max"></div>
+  <label>$/Sqft</label>
+  <div class="row"><input id="ppsmin" type="number" placeholder="min"><input id="ppsmax" type="number" placeholder="max"></div>
   <label>Year built</label>
   <div class="row"><input id="ybmin" type="number" placeholder="min"><input id="ybmax" type="number" placeholder="max"></div>
   <label>Last sale price ($)</label>
@@ -201,7 +205,7 @@ function haversineMi([lat1,lng1],lat2,lng2){
   const a=Math.sin(dLat/2)**2+Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
-const FIELD_IDS=['q','vmin','vmax','amin','amax','hs','imp','beds','baths','ybmin','ybmax','spmin','spmax','dist','evmin','evmax'];
+const FIELD_IDS=['q','vmin','vmax','amin','amax','hs','imp','beds','baths','sqmin','sqmax','ppsmin','ppsmax','ybmin','ybmax','spmin','spmax','dist','evmin','evmax'];
 // Maps each HF (header-filter) key to its URL query-param name — kept as the
 // short names the sidebar controls used to use (cat/mstatus/flood), so old
 // bookmarked/shared URLs still restore correctly.
@@ -290,9 +294,12 @@ function apply(){
   const n=id=>$(id).value===''?null:+$(id).value;
   const vmin=n('vmin'),vmax=n('vmax'),amin=n('amin'),amax=n('amax'),evmin=n('evmin'),evmax=n('evmax');
   const bedsMin=n('beds'),bathsMin=n('baths'),ybmin=n('ybmin'),ybmax=n('ybmax'),spmin=n('spmin'),spmax=n('spmax'),distMax=n('dist');
+  const sqmin=n('sqmin'),sqmax=n('sqmax'),ppsmin=n('ppsmin'),ppsmax=n('ppsmax');
   view=data.filter(d=>(!q||d.hay.includes(q))&&(cats.length===0||cats.includes(d.cat||EMPTYV))&&(vmin==null||d.value>=vmin)&&(vmax==null||d.value<=vmax)
     &&(amin==null||d.acres>=amin)&&(amax==null||d.acres<=amax)&&(!hs||(hs=='y')==(d.hs>0))&&(!imp||(imp=='y')==(d.imp>0))
     &&(bedsMin==null||d.beds>=bedsMin)&&(bathsMin==null||d.baths>=bathsMin)
+    &&(sqmin==null||d.sqft>=sqmin)&&(sqmax==null||d.sqft<=sqmax)
+    &&(ppsmin==null||d.pricePerSqft>=ppsmin)&&(ppsmax==null||d.pricePerSqft<=ppsmax)
     &&(ybmin==null||d.yearBuilt>=ybmin)&&(ybmax==null||d.yearBuilt<=ybmax)
     &&(spmin==null||d.lastSalePrice>=spmin)&&(spmax==null||d.lastSalePrice<=spmax)
     &&(distMax==null||(d.dist!=null&&d.dist<=distMax))
@@ -316,7 +323,7 @@ function render(){
 }
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 $('more').onclick=()=>{shown+=200;render()};
-['q','vmin','vmax','amin','amax','hs','imp','beds','baths','ybmin','ybmax','spmin','spmax','dist','evmin','evmax'].forEach(id=>$(id).addEventListener('input',apply));
+['q','vmin','vmax','amin','amax','hs','imp','beds','baths','sqmin','sqmax','ppsmin','ppsmax','ybmin','ybmax','spmin','spmax','dist','evmin','evmax'].forEach(id=>$(id).addEventListener('input',apply));
 function clearAllFilters(){
   document.querySelectorAll('aside input:not([type=checkbox]),aside select').forEach(e=>e.value='');
   Object.values(HF).forEach(h=>h.selected.clear());
