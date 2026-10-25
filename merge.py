@@ -23,6 +23,17 @@ def to_acres(s):
     m = re.search(r'[\d.]+', s)
     return float(m.group()) if m else None
 
+def to_sqft(s):
+    # finishedAreaSf is often a decimal ("1237.5"), not an integer string -
+    # to_int() strips the "." the same way it strips a "," from a dollar
+    # amount, which silently turns 1237.5 into 12375 (or much worse for
+    # longer decimals, e.g. "29963.54951" -> 2996354951). Use the same
+    # float-then-round approach as to_acres() instead. See #96.
+    if not s:
+        return None
+    m = re.search(r'[\d.]+', s)
+    return round(float(m.group())) if m else None
+
 def norm_parcid(s):
     return re.sub(r'[^0-9]', '', s or '')
 
@@ -68,10 +79,8 @@ def main():
         p["lastSaleDate"] = pr.get("saleDate") or None
         p["grantor"] = (pr.get("grantor") or "").strip() or None
         p["landClass"] = (pr.get("land_class") or "").strip() or None
-        # to_int("N/A") -> None automatically (regex strips all non-digits).
-        # backfill_sqft.py (#33) is still filling this in for some accounts as
-        # of this writing - partial coverage is expected, not a bug.
-        p["sqft"] = to_int(pr.get("finishedAreaSf"))
+        # to_sqft("N/A") -> None automatically (no digits to match).
+        p["sqft"] = to_sqft(pr.get("finishedAreaSf"))
 
     json.dump(parcels, open("data.json", "w"), separators=(",", ":"))
     json.dump({"lastUpdated": datetime.now(timezone.utc).isoformat()}, open("meta.json", "w"))
