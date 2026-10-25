@@ -9,6 +9,10 @@ tells you which build you're on and which is latest, so you can read down
 from the top and stop once you reach your own build number — everything
 above it is new since you last refreshed.
 
+## Build 34 — 2026-10-25 18:40 ET
+
+The square-footage backfill is complete — 2,579 of 3,020 parcels now have square footage (the rest genuinely have none on record, not missing data).
+
 ## Build 33 — 2026-10-25 18:31 ET
 
 Added Square feet and $/Sqft range filters in the sidebar, next to Bathrooms.
