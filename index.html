@@ -49,7 +49,7 @@ tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
   <label>Search (address, owner, SPAN)</label><input id="q" type="search" placeholder="e.g. State St">
   <label>Property type</label><div id="catBox" class="chk-group"></div>
   <label>Listing status</label>
-  <select id="mstatus"><option value="">Any</option><option value="FOR_SALE">For sale</option><option value="CONTINGENT">Contingent</option><option value="PENDING">Pending</option><option value="OFF_MARKET">Off market</option><option value="SOLD">Sold</option><option value="FOR_RENT">For rent</option></select>
+  <select id="mstatus" title="Based on Realtor.com listing history (via HomeHarvest), not a live MLS feed"><option value="">Any</option><option value="FOR_SALE">For sale</option><option value="CONTINGENT">Contingent</option><option value="PENDING">Pending</option><option value="OFF_MARKET">Off market</option><option value="SOLD">Sold</option><option value="FOR_RENT">For rent</option><option value="NONE">Not listed (no Realtor.com record)</option></select>
   <label>Assessed value ($)</label>
   <div class="row"><input id="vmin" type="number" placeholder="min"><input id="vmax" type="number" placeholder="max"></div>
   <label>Est. market value ($)</label>
@@ -146,7 +146,7 @@ function apply(){
     &&(ybmin==null||d.yearBuilt>=ybmin)&&(ybmax==null||d.yearBuilt<=ybmax)
     &&(spmin==null||d.lastSalePrice>=spmin)&&(spmax==null||d.lastSalePrice<=spmax)
     &&(distMax==null||(d.dist!=null&&d.dist<=distMax))
-    &&(!mstatus||d.mktStatus===mstatus)
+    &&(!mstatus||(mstatus==='NONE'?!d.mktStatus:d.mktStatus===mstatus))
     &&(mvmin==null||d.mktEstValue>=mvmin)&&(mvmax==null||d.mktEstValue<=mvmax));
   const {k,d}=sort;
   view.sort((a,b)=>{
@@ -159,7 +159,7 @@ function apply(){
 }
 function render(){
   $('count').textContent=`${view.length.toLocaleString()} of ${data.length.toLocaleString()} properties`;
-  $('body').innerHTML=view.slice(0,shown).map(d=>`<tr><td>${esc(d.address)}</td><td>${esc(d.owner)}</td><td>${CATS[d.cat]||d.cat}</td><td>${d.mktUrl?`<a href="${esc(d.mktUrl)}" target="_blank" rel="noopener">${esc(MSTATUS[d.mktStatus]||d.mktStatus)}</a>`:esc(MSTATUS[d.mktStatus]||'')}</td><td class="n">${fmt(d.value)}</td><td class="n">${fmt(d.mktEstValue)}</td><td class="n">${d.beds??''}</td><td class="n">${d.baths??''}</td><td class="n">${d.yearBuilt??''}</td><td class="n">${fmt(d.lastSalePrice)}</td><td>${esc(d.lastSaleDate)}</td><td class="n">${d.acres.toFixed(2)}</td><td class="n">${d.dist!=null?d.dist.toFixed(1):''}</td><td>${esc(d.span)}</td></tr>`).join('');
+  $('body').innerHTML=view.slice(0,shown).map(d=>`<tr><td>${esc(d.address)}</td><td>${esc(d.owner)}</td><td>${CATS[d.cat]||d.cat}</td><td>${d.mktUrl?`<a href="${esc(d.mktUrl)}" target="_blank" rel="noopener">${esc(MSTATUS[d.mktStatus]||d.mktStatus)}</a>`:d.mktStatus?esc(MSTATUS[d.mktStatus]||d.mktStatus):`<span style="color:var(--mut)">Not listed</span>`}</td><td class="n">${fmt(d.value)}</td><td class="n">${fmt(d.mktEstValue)}</td><td class="n">${d.beds??''}</td><td class="n">${d.baths??''}</td><td class="n">${d.yearBuilt??''}</td><td class="n">${fmt(d.lastSalePrice)}</td><td>${esc(d.lastSaleDate)}</td><td class="n">${d.acres.toFixed(2)}</td><td class="n">${d.dist!=null?d.dist.toFixed(1):''}</td><td>${esc(d.span)}</td></tr>`).join('');
   $('more').style.display=view.length>shown?'block':'none';
   if(map&&$('map').style.display=='block')drawMap();
 }
