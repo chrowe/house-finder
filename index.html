@@ -45,7 +45,7 @@ tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
 </head>
 <body>
 <div id="updateBanner">A new version of this app is available.<a href="https://github.com/chrowe/house-finder/blob/main/CHANGELOG.md" target="_blank" rel="noopener">What's new</a><button onclick="location.reload()">Refresh</button><button onclick="$('updateBanner').style.display='none'">Dismiss</button></div>
-<header><h1>Montpelier, VT — Property Finder</h1><span id="count"></span><span id="updated" style="font-size:12px;color:var(--mut)"></span><a href="https://github.com/chrowe/house-finder/issues/new" target="_blank" rel="noopener" style="margin-left:auto;font-size:12px;color:var(--mut)">Suggest a feature / report a bug</a></header>
+<header><h1>Montpelier, VT — Property Finder</h1><span id="count"></span><span id="updated" style="font-size:12px;color:var(--mut)"></span><a href="https://github.com/chrowe/house-finder/blob/main/CHANGELOG.md" target="_blank" rel="noopener" style="margin-left:auto;font-size:12px;color:var(--mut)">Changelog</a><a href="https://github.com/chrowe/house-finder/issues/new" target="_blank" rel="noopener" style="font-size:12px;color:var(--mut)">Suggest a feature / report a bug</a></header>
 <main>
 <aside>
   <label>Search (address, owner, SPAN)</label><input id="q" type="search" placeholder="e.g. State St">
@@ -81,6 +81,16 @@ tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
   <div class="tabs"><button id="tt" class="on">Table</button><button id="tm">Map</button></div>
   <div id="tablewrap"><table><thead><tr id="head"></tr></thead><tbody id="body"></tbody></table><button id="more">Show more</button></div>
   <input id="hscroll" type="range" min="0" max="0" value="0" title="Scroll table sideways">
+  <div id="mapControls" style="display:none;padding:8px 12px 0">
+    <label style="display:inline;margin:0;font-weight:400;text-transform:none;letter-spacing:normal;font-size:13px">Color points by</label>
+    <select id="mapColorBy" style="width:auto;display:inline-block;margin-left:6px">
+      <option value="">None</option>
+      <option value="cat">Property type</option>
+      <option value="flood">Flood risk</option>
+      <option value="listing">Listing status</option>
+    </select>
+    <span id="mapLegend" style="margin-left:12px;font-size:12px"></span>
+  </div>
   <div id="map"></div>
 </section>
 </main>
@@ -91,6 +101,29 @@ const DOWNTOWN=[44.2601,-72.5754]; // Vermont State House, Montpelier
 const MSTATUS={FOR_SALE:'For sale',CONTINGENT:'Contingent',PENDING:'Pending',OFF_MARKET:'Off market',SOLD:'Sold',FOR_RENT:'For rent'};
 const COLS=[['address','Address'],['owner','Owner'],['cat','Type'],['mktStatus','Listing'],['value','Assessed $',1],['mktEstValue','Est. Value $',1],['beds','Beds',1],['baths','Baths',1],['yearBuilt','Year',1],['lastSalePrice','Last Sale $',1],['lastSaleDate','Sale Date'],['acres','Acres',1],['dist','Dist (mi)',1],['floodRisk','Flood Risk'],['span','SPAN']];
 const FLOOD={minimal:'Minimal',moderate:'Moderate',high:'High',floodway:'Floodway'};
+// Map point coloring: categorical fields with >3 real values (property type,
+// listing status) are capped at the top categories + "Other" rather than
+// given one hue each — beyond 3 categories, adjacent-hue colorblind
+// confusability fails validation (see dataviz skill), so extra categories
+// fold into a muted "Other" bucket instead of adding more hues.
+const MAPDARK=matchMedia('(prefers-color-scheme:dark)').matches;
+const MAPMUTED=MAPDARK?'#9aa3ad':'#667085';
+const MAPSLOT1=MAPDARK?'#3987e5':'#2a78d6',MAPSLOT2=MAPDARK?'#d95926':'#eb6834',MAPSLOT3=MAPDARK?'#199e70':'#1baf7a';
+const MAPSTATUS={warning:'#fab219',serious:'#ec835a',critical:'#d03b3b'};
+const COLORBY={
+  cat:{
+    get:d=>({R1:['Residential (<6ac)',MAPSLOT1],O:['Other/condo',MAPSLOT2],C:['Commercial',MAPSLOT3]}[d.cat]||['Other',MAPMUTED]),
+    legend:[['Residential (<6ac)',MAPSLOT1],['Other/condo',MAPSLOT2],['Commercial',MAPSLOT3],['Other',MAPMUTED]]
+  },
+  flood:{
+    get:d=>({moderate:['Moderate',MAPSTATUS.warning],high:['High',MAPSTATUS.serious],floodway:['Floodway',MAPSTATUS.critical]}[d.floodRisk]||['Minimal',MAPMUTED]),
+    legend:[['Minimal',MAPMUTED],['Moderate',MAPSTATUS.warning],['High',MAPSTATUS.serious],['Floodway',MAPSTATUS.critical]]
+  },
+  listing:{
+    get:d=>d.mktStatus==='FOR_SALE'?['For sale',MAPSLOT1]:(d.mktStatus==='CONTINGENT'||d.mktStatus==='PENDING')?['Pending/Contingent',MAPSLOT2]:['Other/not listed',MAPMUTED],
+    legend:[['For sale',MAPSLOT1],['Pending/Contingent',MAPSLOT2],['Other/not listed',MAPMUTED]]
+  }
+};
 const $=id=>document.getElementById(id);
 const fmt=n=>n==null?'':'$'+n.toLocaleString();
 let data=[],view=[],sort={k:'address',d:1},shown=100,map,layer;
@@ -188,16 +221,28 @@ $('reset').onclick=()=>{
 };
 function drawMap(){
   layer.clearLayers();
-  view.filter(d=>d.lat).forEach(d=>L.circleMarker([d.lat,d.lng],{radius:4,weight:1,color:'#1f6f4a',fillOpacity:.6})
-    .bindPopup(`<b>${esc(d.address)}</b>${d.mktStatus?` <span style="color:var(--acc)">· ${esc(MSTATUS[d.mktStatus]||d.mktStatus)}</span>`:''}<br>${esc(d.owner)}<br>${CATS[d.cat]||d.cat} · ${fmt(d.value)} · ${d.acres.toFixed(2)} ac${d.beds?` · ${d.beds}bd/${d.baths??'?'}ba`:''}${d.yearBuilt?` · built ${d.yearBuilt}`:''}${d.mktEstValue?` · est. ${fmt(d.mktEstValue)}`:''}${d.mktUrl?` · <a href="${esc(d.mktUrl)}" target="_blank" rel="noopener">listing</a>`:''}${d.floodRisk!=='minimal'?` · <span style="color:#c0392b">${FLOOD[d.floodRisk]} flood risk</span>`:''}`).addTo(layer));
+  const cb=COLORBY[$('mapColorBy').value];
+  view.filter(d=>d.lat).forEach(d=>{
+    const color=cb?cb.get(d)[1]:'#1f6f4a';
+    L.circleMarker([d.lat,d.lng],{radius:4,weight:1,color,fillOpacity:.6})
+      .bindPopup(`<b>${esc(d.address)}</b>${d.mktStatus?` <span style="color:var(--acc)">· ${esc(MSTATUS[d.mktStatus]||d.mktStatus)}</span>`:''}<br>${esc(d.owner)}<br>${CATS[d.cat]||d.cat} · ${fmt(d.value)} · ${d.acres.toFixed(2)} ac${d.beds?` · ${d.beds}bd/${d.baths??'?'}ba`:''}${d.yearBuilt?` · built ${d.yearBuilt}`:''}${d.mktEstValue?` · est. ${fmt(d.mktEstValue)}`:''}${d.mktUrl?` · <a href="${esc(d.mktUrl)}" target="_blank" rel="noopener">listing</a>`:''}${d.floodRisk!=='minimal'?` · <span style="color:#c0392b">${FLOOD[d.floodRisk]} flood risk</span>`:''}`).addTo(layer);
+  });
+  renderMapLegend();
+}
+function renderMapLegend(){
+  const cb=COLORBY[$('mapColorBy').value];
+  $('mapLegend').innerHTML=cb?cb.legend.map(([label,color])=>
+    `<span style="display:inline-block;margin-right:10px"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};margin-right:4px"></span>${esc(label)}</span>`
+  ).join(''):'';
 }
 $('tm').onclick=()=>{
-  $('tablewrap').style.display='none';$('hscroll').style.display='none';$('map').style.display='block';$('tm').classList.add('on');$('tt').classList.remove('on');
+  $('tablewrap').style.display='none';$('hscroll').style.display='none';$('map').style.display='block';$('mapControls').style.display='block';$('tm').classList.add('on');$('tt').classList.remove('on');
   if(!map){map=L.map('map').setView([44.26,-72.575],14);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map);layer=L.layerGroup().addTo(map)}
   map.invalidateSize();drawMap();
 };
-$('tt').onclick=()=>{$('tablewrap').style.display='';$('hscroll').style.display='';$('map').style.display='none';$('tt').classList.add('on');$('tm').classList.remove('on');syncHscroll()};
+$('tt').onclick=()=>{$('tablewrap').style.display='';$('hscroll').style.display='';$('map').style.display='none';$('mapControls').style.display='none';$('tt').classList.add('on');$('tm').classList.remove('on');syncHscroll()};
+$('mapColorBy').onchange=drawMap;
 $('hscroll').oninput=()=>{$('tablewrap').scrollLeft=+$('hscroll').value};
 $('tablewrap').addEventListener('scroll',()=>{$('hscroll').value=$('tablewrap').scrollLeft});
 window.addEventListener('resize',syncHscroll);
