@@ -9,6 +9,10 @@ tells you which build you're on and which is latest, so you can read down
 from the top and stop once you reach your own build number — everything
 above it is new since you last refreshed.
 
+## Build 29 — 2026-10-25 18:00 ET
+
+Reordered table columns to lead with what matters most for deciding on a property (status, beds/baths, price, acres, year) — historical/technical fields (owner, sale history, SPAN) now come last.
+
 ## Build 28 — 2026-10-25 17:55 ET
 
 Replaced Google Sign-In with silent anonymous auth and one shared database — no sign-in needed to categorize a property anymore. (Needs Anonymous Auth enabled in the Firebase console before it works — see AGENTS.md.)
