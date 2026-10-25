@@ -74,9 +74,12 @@ merge_listings.py → data.json        (joins listings.json onto data.json by ad
   during development at paces that seemed reasonable at the time. `enrich.py` now
   paces itself at roughly one request every 2-3 seconds with bounded retries and a
   long backoff on 403 — which means a full scrape takes hours, not minutes (#3).
-- **~400 condo units won't join to assessor records**, because VCGI's SPAN for
-  them (`C-12405-17`) doesn't match Patriot Properties' numeric SPAN format
-  (`405-126-11496`) used for standalone parcels. See #4.
+- **125 of 408 condo units still don't join to assessor records.** VCGI's SPAN
+  for condos (`C-12405-17`) is shared across every unit in a building, not a
+  per-unit key, so `merge.py` falls back to joining on Parcel ID (VCGI's
+  `PARCID` and Patriot's `parcelId` are the same identifier, just with a
+  different separator, and unique per unit) — this recovers 283 of 408; the
+  rest have no Patriot record at all. See #4.
 - **No school-zone filter.** Montpelier is a single school district (one
   elementary, one high school), so this wouldn't meaningfully distinguish
   properties — intentionally skipped rather than deferred.
@@ -89,8 +92,8 @@ merge_listings.py → data.json        (joins listings.json onto data.json by ad
       filters (#2)
 - [x] Deploy to GitHub Pages (#7) — live at https://chrowe.github.io/house-finder/
 - [x] Listing status + estimated market value via Realtor.com/HomeHarvest (#21,
-      partially #5 — coverage is partial, see limitations above)
-- [ ] Finish the full assessor scrape (#3)
-- [ ] Fix condo SPAN join (#4)
+      #5 — coverage is partial by design, see limitations above)
+- [x] Finish the full assessor scrape (#3)
+- [x] Fix condo SPAN join (#4) — 283 of 408 recovered via Parcel ID fallback
 - [ ] Flood-zone filter (#6)
 - [ ] Automate periodic data refresh (#8)

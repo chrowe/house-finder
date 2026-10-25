@@ -48,9 +48,12 @@ rerun `python3 enrich.py` and it picks up where it left off. See [#3](https://gi
 
 ## Known data gaps (don't re-discover these from scratch)
 
-- ~400 condo units have a VCGI SPAN like `C-12405-17` that doesn't match Patriot
-  Properties' numeric format (`405-126-11496`) — they won't join in `merge.py`
-  even after a full scrape. See [#4](https://github.com/chrowe/house-finder/issues/4).
+- 408 condo units have a VCGI SPAN like `C-12405-17` shared across every unit in
+  the building, not a per-unit key — `merge.py` falls back to joining those on
+  Parcel ID instead (VCGI's `PARCID` and Patriot's scraped `parcelId` are the
+  same identifier with a different separator, and unique per unit). This
+  recovers 283 of 408 condos; the rest genuinely have no Patriot record (not
+  scraped, or no individual tax account). See [#4](https://github.com/chrowe/house-finder/issues/4).
 - Listing status/market value (`listings.py`/`merge_listings.py`) only cover
   properties that matched a Realtor.com record from roughly the last 10 years —
   most properties (especially ones that haven't changed hands recently) will have
