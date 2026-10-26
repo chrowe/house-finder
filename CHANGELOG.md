@@ -9,6 +9,10 @@ tells you which build you're on and which is latest, so you can read down
 from the top and stop once you reach your own build number — everything
 above it is new since you last refreshed.
 
+## Build 38 — 2026-10-26 08:28 ET
+
+Added a "My Status" column and filter — see all the properties you've tagged/left notes on at a glance, instead of opening each one individually.
+
 ## Build 37 — 2026-10-25 19:19 ET
 
 Added Zillow and Redfin search links to the property page. Zillow links directly (no API key); Redfin falls back to a Google site-search since no reliable direct address-search URL was found for it.
