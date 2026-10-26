@@ -153,5 +153,7 @@ estimate_value.py → data.json        (extrapolates ourEstValue from assessed v
 - [x] Sq Ft / $/Sqft columns (#84) — partial coverage, same backfill as #33
 - [x] Saved filters (#86, #98) — moved from localStorage to Firestore, now
       syncs across devices like the categorization data does
+- [x] "My Status" column/filter (#102) — table-wide view of tagged/noted
+      properties, one bulk Firestore read rather than one query per row
 - [ ] Embed Street View as an inline image (#74) — needs a Google Maps
       Platform API key (free, no billing account required)

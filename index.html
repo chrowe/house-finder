@@ -140,7 +140,7 @@ tr:hover td{background:color-mix(in srgb,var(--acc) 10%,transparent)}
 const CATS={R1:'Residential (<6 ac)',R2:'Residential (6+ ac)',C:'Commercial',CA:'Commercial apartments',O:'Other / condo',M:'Mobile home (landed)',MHL:'Mobile home (leased land)',I:'Industrial',UE:'Utility – electric',S1:'Seasonal'};
 const DOWNTOWN=[44.2601,-72.5754]; // Vermont State House, Montpelier
 const MSTATUS={FOR_SALE:'For sale',CONTINGENT:'Contingent',PENDING:'Pending',OFF_MARKET:'Off market',SOLD:'Sold',FOR_RENT:'For rent'};
-const COLS=[['address','Address'],['mktStatus','Listing'],['beds','Beds',1],['baths','Baths',1],['sqft','Sq Ft',1],['pricePerSqft','$/Sqft',1],['estValue','Est. Value $',1],['value','Assessed $',1],['acres','Acres',1],['yearBuilt','Year',1],['cat','Type'],['floodRisk','Flood Risk'],['dist','Dist (mi)',1],['lastSalePrice','Last Sale $',1],['lastSaleDate','Sale Date'],['owner','Owner'],['span','SPAN']];
+const COLS=[['address','Address'],['myStatus','My Status'],['mktStatus','Listing'],['beds','Beds',1],['baths','Baths',1],['sqft','Sq Ft',1],['pricePerSqft','$/Sqft',1],['estValue','Est. Value $',1],['value','Assessed $',1],['acres','Acres',1],['yearBuilt','Year',1],['cat','Type'],['floodRisk','Flood Risk'],['dist','Dist (mi)',1],['lastSalePrice','Last Sale $',1],['lastSaleDate','Sale Date'],['owner','Owner'],['span','SPAN']];
 const FLOOD={minimal:'Minimal',moderate:'Moderate',high:'High',floodway:'Floodway'};
 const FLOOD_FULL={minimal:'Minimal / not mapped',moderate:'Moderate (0.2% annual chance)',high:'High (1% annual chance / SFHA)',floodway:'Floodway (highest risk)'};
 // Sentinel used (instead of a literal '') for "no value" in the header-filter
@@ -152,10 +152,12 @@ const EMPTYV='NONE';
 // dropdown multi-select in the header (issue #35), replacing their old
 // sidebar controls. `get` normalizes a row to the value used for matching/
 // counting; `label` is the human-readable text shown next to each checkbox.
+const MYSTATUS={interested:'Interested',maybe:'Maybe',rejected:'Rejected',visited:'Visited'};
 const HFDEF={
   cat:{get:d=>d.cat||EMPTYV,label:v=>v===EMPTYV?'(Empty)':(CATS[v]||v)},
   mktStatus:{get:d=>d.mktStatus||EMPTYV,label:v=>v===EMPTYV?'Not listed (no Realtor.com record)':(MSTATUS[v]||v),order:['FOR_SALE','CONTINGENT','PENDING','OFF_MARKET','SOLD','FOR_RENT',EMPTYV]},
-  floodRisk:{get:d=>d.floodRisk,label:v=>FLOOD_FULL[v]||v,order:['minimal','moderate','high','floodway']}
+  floodRisk:{get:d=>d.floodRisk,label:v=>FLOOD_FULL[v]||v,order:['minimal','moderate','high','floodway']},
+  myStatus:{get:d=>d.myStatus||EMPTYV,label:v=>v===EMPTYV?'Not tagged':(MYSTATUS[v]||v),order:['interested','maybe','rejected','visited',EMPTYV]}
 };
 let HF={}; // populated by buildHF() once data loads: key -> {selected:Set, values:[...], counts:{...}}
 function buildHF(){
@@ -210,7 +212,7 @@ const FIELD_IDS=['q','vmin','vmax','amin','amax','hs','imp','beds','baths','sqmi
 // Maps each HF (header-filter) key to its URL query-param name — kept as the
 // short names the sidebar controls used to use (cat/mstatus/flood), so old
 // bookmarked/shared URLs still restore correctly.
-const HF_PARAM={cat:'cat',mktStatus:'mstatus',floodRisk:'flood'};
+const HF_PARAM={cat:'cat',mktStatus:'mstatus',floodRisk:'flood',myStatus:'mine'};
 function restoreFromUrl(){
   const p=new URLSearchParams(location.search);
   FIELD_IDS.forEach(id=>{if(p.has(id))$(id).value=p.get(id)});
@@ -252,10 +254,18 @@ fetch('data.json').then(r=>r.json()).then(rows=>{
     ourEstValue:r.ourEstValue??null,estValue:r.mktEstValue??r.ourEstValue??null,
     sqft:r.sqft??null,
     parcid:r.PARCID||'',
-    floodRisk:r.floodRisk||'minimal'}));
+    floodRisk:r.floodRisk||'minimal',
+    myStatus:'',myNotes:''}));
   data.forEach(d=>d.pricePerSqft=(d.estValue&&d.sqft)?Math.round(d.estValue/d.sqft):null);
   data.forEach(d=>d.hay=(d.address+' '+d.owner+' '+d.span+' '+d.desc).toLowerCase());
   computeFieldRanges();
+  // Covers the race where Firestore's bulk categorization load (module
+  // script, triggered by anonymous auth) finishes before this data.json
+  // fetch does - in that case the module already tried calling
+  // applyMyStatuses() while data was still empty (a no-op, see its guard),
+  // so pull whatever it cached instead of silently losing that data.
+  const cachedMap=window.getCategorizationsMap?.();
+  if(cachedMap)applyMyStatuses(cachedMap);
   buildHF();
   renderHead();
   $('head').onclick=e=>{
@@ -291,7 +301,7 @@ function renderHead(){
 }
 function apply(){
   const q=$('q').value.toLowerCase().trim(),hs=$('hs').value,imp=$('imp').value;
-  const cats=[...HF.cat.selected],mstatuses=[...HF.mktStatus.selected],floods=[...HF.floodRisk.selected];
+  const cats=[...HF.cat.selected],mstatuses=[...HF.mktStatus.selected],floods=[...HF.floodRisk.selected],mines=[...HF.myStatus.selected];
   const n=id=>$(id).value===''?null:+$(id).value;
   const vmin=n('vmin'),vmax=n('vmax'),amin=n('amin'),amax=n('amax'),evmin=n('evmin'),evmax=n('evmax');
   const bedsMin=n('beds'),bathsMin=n('baths'),ybmin=n('ybmin'),ybmax=n('ybmax'),spmin=n('spmin'),spmax=n('spmax'),distMax=n('dist');
@@ -306,7 +316,8 @@ function apply(){
     &&(distMax==null||(d.dist!=null&&d.dist<=distMax))
     &&(mstatuses.length===0||mstatuses.includes(d.mktStatus||EMPTYV))
     &&(evmin==null||d.estValue>=evmin)&&(evmax==null||d.estValue<=evmax)
-    &&(floods.length===0||floods.includes(d.floodRisk)));
+    &&(floods.length===0||floods.includes(d.floodRisk))
+    &&(mines.length===0||mines.includes(d.myStatus||EMPTYV)));
   const {k,d}=sort;
   view.sort((a,b)=>{
     const av=a[k],bv=b[k];
@@ -318,7 +329,7 @@ function apply(){
 }
 function render(){
   $('count').textContent=`${view.length.toLocaleString()} of ${data.length.toLocaleString()} properties`;
-  $('body').innerHTML=view.slice(0,shown).map(d=>`<tr><td><a href="?span=${encodeURIComponent(d.span)}" class="addr-link">${esc(d.address)}</a></td><td>${d.mktUrl?`<a href="${esc(d.mktUrl)}" target="_blank" rel="noopener">${esc(MSTATUS[d.mktStatus]||d.mktStatus)}</a>`:d.mktStatus?esc(MSTATUS[d.mktStatus]||d.mktStatus):`<span style="color:var(--mut)">Not listed</span>`}</td><td class="n">${d.beds??''}</td><td class="n">${d.baths??''}</td><td class="n">${d.sqft??''}</td><td class="n">${d.pricePerSqft!=null?'$'+d.pricePerSqft.toLocaleString():''}</td><td class="n">${d.mktEstValue!=null?fmt(d.mktEstValue):d.ourEstValue!=null?`<span style="font-style:italic;color:var(--mut)" title="Rough estimate, not a real market estimate: assessed value × the typical ratio of real Realtor.com estimates to assessed value in town.">${fmt(d.ourEstValue)}</span>`:''}</td><td class="n">${fmt(d.value)}</td><td class="n">${d.acres.toFixed(2)}</td><td class="n">${d.yearBuilt??''}</td><td>${CATS[d.cat]||d.cat}</td><td>${d.floodRisk==='minimal'?`<span style="color:var(--mut)">No flood risk</span>`:`<span style="color:${d.floodRisk==='floodway'?'#c0392b':d.floodRisk==='high'?'#e67e22':'var(--mut)'}">${FLOOD[d.floodRisk]}</span>`}</td><td class="n">${d.dist!=null?d.dist.toFixed(1):''}</td><td class="n">${fmt(d.lastSalePrice)}</td><td>${esc(d.lastSaleDate)}</td><td>${esc(d.owner)}</td><td>${esc(d.span)}</td></tr>`).join('');
+  $('body').innerHTML=view.slice(0,shown).map(d=>`<tr><td><a href="?span=${encodeURIComponent(d.span)}" class="addr-link">${esc(d.address)}</a></td><td>${d.myStatus?`<span style="color:${d.myStatus==='interested'?'var(--acc)':d.myStatus==='rejected'?'#c0392b':'var(--mut)'}" title="${esc(d.myNotes)}">${MYSTATUS[d.myStatus]||d.myStatus}</span>`:''}</td><td>${d.mktUrl?`<a href="${esc(d.mktUrl)}" target="_blank" rel="noopener">${esc(MSTATUS[d.mktStatus]||d.mktStatus)}</a>`:d.mktStatus?esc(MSTATUS[d.mktStatus]||d.mktStatus):`<span style="color:var(--mut)">Not listed</span>`}</td><td class="n">${d.beds??''}</td><td class="n">${d.baths??''}</td><td class="n">${d.sqft??''}</td><td class="n">${d.pricePerSqft!=null?'$'+d.pricePerSqft.toLocaleString():''}</td><td class="n">${d.mktEstValue!=null?fmt(d.mktEstValue):d.ourEstValue!=null?`<span style="font-style:italic;color:var(--mut)" title="Rough estimate, not a real market estimate: assessed value × the typical ratio of real Realtor.com estimates to assessed value in town.">${fmt(d.ourEstValue)}</span>`:''}</td><td class="n">${fmt(d.value)}</td><td class="n">${d.acres.toFixed(2)}</td><td class="n">${d.yearBuilt??''}</td><td>${CATS[d.cat]||d.cat}</td><td>${d.floodRisk==='minimal'?`<span style="color:var(--mut)">No flood risk</span>`:`<span style="color:${d.floodRisk==='floodway'?'#c0392b':d.floodRisk==='high'?'#e67e22':'var(--mut)'}">${FLOOD[d.floodRisk]}</span>`}</td><td class="n">${d.dist!=null?d.dist.toFixed(1):''}</td><td class="n">${fmt(d.lastSalePrice)}</td><td>${esc(d.lastSaleDate)}</td><td>${esc(d.owner)}</td><td>${esc(d.span)}</td></tr>`).join('');
   $('more').style.display=view.length>shown?'block':'none';
   if(map&&$('map').style.display=='block')drawMap();
 }
@@ -347,6 +358,26 @@ function applySavedFilterQs(qs){
   apply();
 }
 window.getCurrentFilterQs=()=>{updateUrl();return location.search};
+
+// My Status column/filter (#102): the Firebase module script does one bulk
+// Firestore read (all categorizations, not one query per property) and
+// hands the result here - this classic script has no idea Firebase exists,
+// same decoupling as the other hooks. Re-running buildHF() matters: the
+// myStatus filter's available dropdown values are computed from whatever
+// data currently holds, and before this hook ever fires every row's
+// myStatus is '' (data loads before Firestore auth resolves), so the
+// filter would otherwise only ever offer "Not tagged" as an option.
+function applyMyStatuses(map){
+  if(!data.length)return;
+  data.forEach(d=>{
+    const m=map[d.span];
+    d.myStatus=m?.status||'';
+    d.myNotes=m?.notes||'';
+  });
+  buildHF();
+  renderHead();
+  apply();
+}
 function drawMap(){
   layer.clearLayers();
   const cb=COLORBY[$('mapColorBy').value];
@@ -679,6 +710,7 @@ async function saveCategorization(patch){
   try{
     const ref=doc(db,"categorizations",currentSpan);
     await setDoc(ref,{...patch,updatedAt:serverTimestamp()},{merge:true});
+    loadAllCategorizations(); // keep the table's My Status column/filter in sync
     if(patch.status!==undefined){renderCategorizeWidget();return}
     if(statusEl)statusEl.textContent="Saved.";
   }catch(e){
@@ -746,10 +778,28 @@ document.getElementById("savedFiltersList").addEventListener("click",async e=>{
   }
 });
 
+// My Status column/filter (#102): one bulk read of every categorization,
+// not one query per property. Cached so the classic script can pull it if
+// its own data.json fetch resolves after this does (see the race-condition
+// comment next to applyMyStatuses() in the classic script).
+let categorizationsMapCache=null;
+window.getCategorizationsMap=()=>categorizationsMapCache;
+async function loadAllCategorizations(){
+  if(!authReady)return;
+  try{
+    const snap=await getDocs(collection(db,"categorizations"));
+    const map={};
+    snap.forEach(d=>{map[d.id]=d.data()});
+    categorizationsMapCache=map;
+    window.applyMyStatuses?.(map);
+  }catch(e){console.error("Failed to load categorizations for the table:",e)}
+}
+
 onAuthStateChanged(auth,user=>{
   authReady=!!user;
   renderCategorizeWidget();
   renderSavedFilters();
+  loadAllCategorizations();
 });
 </script>
 </body>
